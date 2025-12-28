@@ -1,0 +1,715 @@
+# Pallad example code
+# This file shows basic syntax for Pallad language.
+
+# Class name is optional
+# Use PascalCase for class names.
+class Example
+# "extends" defines parent class.
+# When parent class is "Object" class, this line is optional, was added here to clear the concept.
+extends Object
+
+# This line is a comment.
+"And this line"
+"""
+Also these lines
+are comment
+"""
+
+"""
+Pallad standard interpreters support docstring conversion, and you
+can use [b]BBCode[/b] in your comments to improve formatting.
+
+Docstrings can be used to describe properties at definition (declaration) time.
+Multiline docstring (docstring means both [code]#[/code] and string-based
+comments) will be merged.
+
+Here is an example:
+"""
+
+# This is language name. [b]Pallad[/b] comes from the element Palladium (symbol Pd),
+# representing clarity, strength, and scientific precision.[br]
+# This description provides example for docstring comments.
+const NAME = "Pallad"
+
+# Red: FIXME, CAUTION, DEBUG;
+# Yellow: NOTE, REFACTOR, OPTIMIZE, DEADLINE, PRIORITY;
+# Green: ASSIGNED_TO, REVIEW, LAST_UPDATE, CATEGORY;
+# Will be highlighted for better comment structure, search, and management.
+
+# Also supports code regions:
+#region Region Name
+# Manage code and have smoother navigation with code regions.
+#endregion
+
+# Every constant, variable, and function starting with "_" is private property, others are public.
+
+# Constant values can be defined with "const" keyword, you can use them to avoid magic values in your code.
+# Use UPPER_SNAKE_CASE for constant names.
+const PI = 3.14
+
+# A constant without value is valid, but not recommended.
+# Use "none" for empty values:
+const HAS_PI = PI != none
+
+# Pallad supports both dynamic and static typing, but constants types will be static anyway.
+# Both following commented codes do same thing as next code, but last one is most recommended way.
+# In all lines, GREETING will be a static value with string type, since constant's value can't be changed, its type is static.
+#const GREETING: string = "Hello, World!" # <- Manual static type
+#const GREETING := "Hello, World!" # <- Automatic static type
+const GREETING = "Hello, World!"
+
+# Variables can be defined with "var" keyword, variables can be static or dynamic typed:
+# Use snake_case for variable names.
+# This variable is dynamic typed, supports any value of any type:
+var name = "Ali" # Yes, Pallad is case sensitive, also NAME is a constant and name is a variable here
+# This value is manually static typed, supports only integer values:
+var _static_typed: int = 53
+# This variable is none and dynamic typed, will be none until assignment:
+var none_by_default
+# This a none variable too, but is static typed and supports only array value:
+var none_array: array
+# This is automatic static typed variable, type will be float:
+var auto_type := -1.9
+
+# You can change value of a variable with [code]variable = value[/code] pattern.
+# Valid, [var name] is dynamic typed
+name = 12
+# Invalid, [var _static_typed] is integer, not string
+#_static_typed = "-7" # <- ValueError
+# Valid
+none_by_default = ["A"]
+# Valid, value will be parsed before assignment
+none_by_default = {"A": none_by_default}
+# Valid, [var _static_typed] is integer, but [code]none[/code] can be passed to any variable
+_static_typed = none_array
+# Valid, 1 will be parsed to 1.0 automatically (just for int -> float)
+auto_type = 1
+
+# Also supports optional setter and getters:
+var activation_state: state[3] = none:
+	setter(new_state: state[3]) -> void:
+		if new_state == true:
+			print("Activated")
+		elif new_state == false:
+			print("Activation Failed!")
+		else:
+			print("Reset activation state...")
+		activation_state = new_state
+	getter(force_value := false) -> string: # Can get parameters!
+		if activation_state == true:
+			return "Completed"
+		elif activation_state == false or force_value:
+			return "Failed"
+		else:
+			return "Not Started"
+
+# Variables with customized setter and getter (setter with more or less than 1 argument and getter with any argument) should be used like this:
+Example.get("activation_state", true)
+# Or in current class:
+get("activation_state", false)
+# [var activation_state] setter is standard, so can be used simply:
+activation_state = true
+
+# Multiple assignments at same time is supported like Python (with tuples under the hood):
+name, _static_typed, none_by_default = "Joe", -100, none
+
+# Pallad supports a wide range of value types.
+
+# Note: AST was used as "Automatic Static Type" ([code]:=[/code] assignments) in following section.
+# "AST is limited" means you can't use direct value in AST assignment but a value from given type can be passed to AST. Following example shows this behavior for states:
+#     var your_state: state[4] = 3
+#     # We want to set same value with static type for my_state:
+#     var my_state := 3 # Incorrect, Will be integer!
+#     var my_state := your_state # Correct, your_state is a state, so my_state will be a state.
+
+# - Basic types
+
+# 1. Variant
+# Accepts any type, this is data type of dynamic typed variables.
+# Can be used with ": variant" but isn't recommended.
+# AST isn't supported. (Will be passed to given type instead of variant)
+# Can be used in function return type to say this function has return value (Compared to "void").
+var variant_variable = 10
+func get_value() -> Variant: # Returns an unknown typed value
+    # Functions will be explained later.
+    return none
+
+# 2. None
+# Represents the absence of a value. Default value for uninitialized variables and constants.
+# Can be assigned to any variable regardless of type, Used in conditions as a third state (besides true and false).
+# Can't be used with ": none".
+# AST isn't supported.
+var none_by_default
+
+# 3. Void
+# Just for return type of functions without any return. Isn't valid as variable type.
+# Can't be used with ": void".
+# AST isn't supported.
+func exit() -> void:
+    pass
+
+# 4. Boolean
+# `true` and `false` are booleans.
+# `and`, `or`, and `not` operators are available.
+# Names stating with "is_", "has_", etc. are recommended for booleans.
+# Important: false isn't equal to none in Pallad!
+# Can be used with ": bool".
+# AST is supported.
+var is_night := false
+
+# 5. Integer
+# Can be used with ": int".
+# AST is supported.
+var year := 2025
+
+# 6. Float
+# Can be used with ": float".
+# AST is supported.
+var temperature := 26.5
+var e := 16e-24
+
+# 7. Complex number
+# Can be used with ": complex".
+# AST is supported.
+var complex_number := 3+4i
+
+# 8. Array
+# Index based container.
+# Can be used with ": array".
+# AST is supported.
+# Supports typed items, AST is limited for typed arrays.
+# Items are accessible with [] by index.
+var array := [1, 2, 3]
+var typed_array: array[int] = [3, 2, 1]
+# [code]range()[/code] function is an array generator:
+var stepped_r := range(1, 7, 2) # 1, 3, 5
+
+# 9. Tuple
+# Index based container with specified size.
+# Can be used with ": tuple", ": tuple[size]".
+# ": tuple" can't be used without value.
+# AST is supported.
+# Supports typed items, AST is limited for typed arrays.
+# Size should be more than 0.
+# Items are accessible with [] by index.
+var user_1: tuple = (31, "Joe", false) # A tuple with three untyped items
+#var empty_tuple: tuple # <- Invalid
+var empty_tuple: tuple[2] # A tuple with two untyped items
+var button_size: tuple[3, float] # A tuple with three typed (float) items (all are none for now)
+var user_2: tuple[int, string, bool] = (42, "Hello", true) # A tuple with three typed items (from different types)
+
+# 10. Set
+# Existence based container with unique items.
+# Can be used with ": set".
+# AST is supported.
+# Supports typed items, AST is limited for typed sets.
+# Items are accessible with converting to array.
+var prime_numbers: set[int] = {2, 3, 5, 7, 2} # Second 2 will be removed without error
+
+# 11. Char
+# A single character.
+# Can be used with ": char".
+# AST is limited. (Will be passed to string)
+# ' is more recommended than ", both are supported.
+var letter: char = 'A'
+
+# 12. String
+# Array of chars.
+# Can be used with ": string".
+# AST is supported.
+# " is more recommended than ', both are supported.
+var font := "Vazirmatn"
+
+# 13. Dictionary
+# Key based container.
+# Can be used with ": dict".
+# AST is supported.
+# Supports typed items, AST is limited for typed dictionaries.
+# Items are accessible with [] by key.
+var passwords: dict[string, string] = {"Admin": "1234", "User1": "cx?!@63"}
+
+# 14. Callable function
+# A reusable function.
+# Can be used with ": function".
+# AST is supported.
+# Usable with call() method.
+var to_int: function = func(data: string) -> int: return int(data)
+
+# 15. Byte
+# One binary byte.
+# Can be used with ": byte".
+# AST is limited. (Will be parsed to integer)
+var eleven: byte = 00001011
+var fifteen := byte("00001111")
+
+# 16. Buffer
+# Sequence of bytes.
+# Can be used with ": buffer".
+# AST is limited (Will be parsed to array)
+var file: buffer = [
+    01001001, 10001101, 00000000,
+    11100100, 00010011, 00000001,
+]
+var message := buffer("Hello World!", buffer.ENCODE_UTF_8)
+
+# - Advanced types
+
+# 1. N-base state
+# Limited integer values in a range.
+# Value is an integer.
+# Can be used with ": state[number_of_states]".
+# AST is limited. (Will be passed to integer)
+# Number of states should be greater than 2.
+var type: state[4] # 0, 1, 2, or 3
+
+# 2. Pair & Triplet
+# Most useful types of tuples. Index based container with 2 (pair) or 3 (triplet) size.
+# Can be used with ": pair" and ": triplet".
+# AST is limited. (Will be passed to tuple)
+# Supports typed items, AST is limited for typed pairs and triplets.
+# Items are accessible with [] by index and with .:
+# door_1_size.x <-> door_1_size[0]
+# door_1_size.y <-> door_1_size[1]
+# pos.x <-> pos[0]
+# pos.y <-> pos[1]
+# pos.z <-> pos[2]
+var door_1_size: pair = (3, 10) # Untyped items
+var door_2_size: pair[float] = (4, 9) # Float items, will be (4.0, 9.0)
+var file_size: pair[float, string] = (5.4, "MB") # Typed items, first should be float and second should be string.
+# Same are supported for triplets: untyped, single type, multiple types.
+var pos: triplet[int] = (3, -10, 0) # Integer items
+
+# 3. Multi-dimensional array
+# Array with multiple dimensions. Size of all arrays in each dimension should be same.
+# Can be used with ": mdarray[dimensions]".
+# AST is limited. (Will be parsed to array)
+# Supports typed items, AST is limited for typed multi-dimensional arrays.
+# Items are accessible with multiple [] by index.
+var cube: mdarray[2, float] = [
+	[
+		[1.3,2,5],
+		[-6,0.1,7.5],
+	], [
+		[5,-2.0,0.34],
+		[0,0,14]
+	], [
+		[6,1.0,-100],
+		[0.5,0.5,0.5],
+	],
+]
+
+# 4. Table
+# Array of arrays.
+# Can be used with ": table" and ": table[columns]".
+# ": table" can't be used without value.
+# AST is limited. (Will be parsed to array)
+# Supports typed items, AST is limited for typed tables.
+# First row can be header (With any type of items).
+# Items are accessible with two [] (second axis is also accessible with column name in header).
+var data: table[4, string, int, string, string] = [
+	["UserID", "Age", "Username", "Password"],
+	["U_54xC", 21, "Max", "M2002X"],
+	["U_3z62", 23, "Joe", "LaT3X!01"],
+] # A table with 4 typed columns.
+
+# 5. Queue
+# A queue array. Add at the end, remove from the first.
+# Can be used with ": queue".
+# AST is limited. (Will be parsed to array)
+# Supports typed items, AST is limited for typed queues.
+# Items are accessible with [] by index, but standard way is enqueue() and dequeue() functions.
+var tasks: queue[string] = []
+tasks.enqueue("Task 1") # ["Task 1"]
+tasks.enqueue("Task 2") # ["Task 1", "Task 2"]
+print(tasks.dequeue()) # prints "Task 1", tasks will be: ["Task 2"]
+
+# 6. Color
+# Special tuple for colors (with 4 items).
+# Can be used with ": color".
+# AST is limited. (Will be parsed to tuple)
+# Items are accessible with [] by index and with .:
+# bg.r <-> bg[0]
+# bg.g <-> bg[1]
+# bg.b <-> bg[2]
+# bg.a <-> bg[3]
+var bg: color = (0.8, 0.7, 0.6) # Normal
+var overlay: color = (1, 1, 1, 0.5) # With alpha
+var red := color.RED # Named colors
+var blue := color(0, 0, 1) # By constructor
+
+# --- End of types section ---
+
+# Functions will be defined with "func" keyword, a function can have any count of parameters (also called argument) and one optional return value.
+# Like Python, multiple return values can be passed as tuple like multiple assignments.
+# Overloading is supported.
+# "..." can be used to pass any count of parameters.
+# Parameters can be passed by name (with "=").
+# All functions are available as callable in parent object's variables and can be called by "call()" function.
+# Use snake_case for function names and parameters.
+func _on_data_received(data: string) -> void:
+    print(f"Data received: {data}")
+
+func sum(...nums: array[int]) -> int:
+	var sum: int = 0
+	for i in nums:
+		sum += i
+	return sum
+
+call(sum, 4, 5) # Returns 9
+
+# Lambda functions can be used as value for variables or even as parameter in a function directly.
+var to_int: function = func(data: string) -> int: return int(data)
+
+# Signals provide trackable events:
+# Use snake_case for signal names and parameters.
+signal data_received(data: string)
+
+data_received.connect(_on_data_received) # See above section for _on_data_received
+
+data_received.emit("Test")
+
+# Enumerations are supported with "enum" keyword.
+# Anonymous enums are supported, items of these enums can be used directly.
+# Items of named enums should be used with enum name. These enums can be used as data type.
+# "@anonymous_shadow" annotation provides a way to use items of these enums directly.
+# Anonymous enum
+enum:
+    ON, # 0
+    OFF, # 1
+    BOTH, # 2, Last "," is optional but recommended
+
+print(OFF) # 1
+
+@anonymous_shadow # Will be accessible without [code]Error.[/code] prefix.
+enum Error:
+    OK, # 0
+    ERROR, # 1
+
+print(OK) # 0
+print(Error.OK) # 0
+
+# Use PascalCase for enum names.
+enum TimeStates:
+    # Use UPPER_SNAKE_CASE for enum items.
+	DAY, # 0
+	NIGHT = 6,
+	MIDNIGHT = 11,
+	MORNING, # 12 (from last)
+
+print(TimeStates.DAY) # 0
+#print(DAY) # <- Error, doesn't exist!
+
+# Named enums can be used as type:
+var time: TimeStates = TimeStates.DAY
+
+# "pass" keyword can be used as placeholder for not implemented code.
+
+# Conditions can be executed with "if", "elif", and "else":
+if is_here:
+    pass
+elif is_valid:
+    pass
+else:
+    pass
+
+# Boolean operators are "and", "or", and "not":
+print(not false or true and true)
+
+# Supports switches:
+# Just first matching branch will be executed.
+# "default" branch is optional.
+switch time:
+	case TimeStates.DAY:
+		pass
+	case TimeStates.NIGHT, TimeStates.MORNING:
+		pass
+	default:
+		pass
+
+# Supports for, while, and do ... while loops.
+
+# Iterate on an array with for:
+for i in range(1, 10):
+	if i % 2:
+		continue
+	if i == 9:
+		break
+	print(i)
+
+# Iterate based on one condition with while and do ... while:
+while condition:
+	pass
+
+# Will be executed at least one time:
+do:
+	pass
+while condition
+
+# "else" can be used in for and while loops to run another block when iterate count is 0.
+# Simple "break" and "continue" are available for all loops same as other languages.
+# Pallad provides "Advanced loop monitoring" and more advanced "break" and "continue" as optional features.
+for i in range(1, 10):
+	for j in range(1, 10) as inner_status: # as inner_status is optional advanced loop monitoring
+		if i == j:
+			break(2) # breaks two loops
+		if i == 9 and j == 9:
+			continue(2) # skips this iteration and next one
+		if i == 10:
+			continue(loops=2) # skips this iteration and current iteration in outer loop
+	match inner_status.status:
+		case LOOP_STATUS_COMPLETE:
+			print("Inner loop was passed completely.")
+		case LOOP_STATUS_FULL_SKIP:
+			print("Inner loop wasn't executed any time.")
+		case LOOP_STATUS_HAS_SKIP:
+			print(f"Inner loop was skipped for {inner_status.skip_count} times.")
+		case LOOP_STATUS_BREAK:
+			print(f"Inner loop was broke at {inner_status.break_iteration} iteration.")
+	print(f"Inner loop executed: {inner_status.iter_executed} of {inner_status.iter_count} ({inner_status.iter_completely_executed} iterations were completed)")
+else:
+    print("Nothing) # when loop number is 0 (e.g. for i in []), same as LOOP_STATUS_FULL_SKIP
+
+# Here is more examples for operators:
+var x: int = 10
+var y: float = 0.5
+var z: int = 8
+
+x + y # 10.5
+x - y # 9.5
+x * y # 5
+x / z # 1.25
+x // z # 1
+x % z # 2
+x ** z # 10^8
+
+x == z # false
+y != z # true
+x > y # true
+x >= y # true
+x < y # false
+x <= y # false
+
+x = 11
+x++ # x = 12
+x-- # x = 11
+x += 1 # x = 12
+x -= 2 # x = 10
+x *= 0.1 # x = 1
+#x /= 2 # <- Invalid, x / 2 is valid but can't be assigned to x from type int!
+y = float(x) # y = 1.0
+y /= 2 # = y = 0.5
+
+false and true # false
+true or false # true
+not false # true
+
+5 & 3 # 1
+5 | 3 # 7
+5 ^ 3 # 6
+~5 # -6
+5 << 1 # 10
+5 >> 1 # 2
+
+4 in [1,4,2,6,8,2,4] # true
+-10 not in [-10, 0, 10] # false
+
+# Exceptions are like Python:
+try:
+	var x: int = 10 / 0
+# When error is a RuntimeError, just this block will be executed, not next one:
+except RuntimeError as error:
+	print("Runtime error: ", error)
+except ValueError, TypeError: # Without passing error object
+	print("Value or type error.")
+except Error as error:
+	print("Generic error: ", error)
+else:
+	print(f"X: {x}") # At success
+finally:
+	print("Cleanup...") # Even at unexpected error
+
+raise "Custom Error!"
+
+assert(x > 0, "X should be positive!")
+
+# Provides internal "log" class for simple logging:
+log.auto_write("program.log", clear=true)
+log.add("Test")
+log.error(f"Error: {e}")
+log.message("Red!", Color.RED)
+log.export("current_run.log")
+
+# Input from terminal is simple:
+var name: string = input("Enter your name: ")
+
+# Output is same:
+print("This is message!")
+print(f"Hello, {name}!")
+print("""
+Line 1
+Line 2
+Line 3
+""")
+
+# "with" can be used to manage context. This is very useful for files:
+try:
+	# "with" provides auto-close:
+	with open("data.txt", "r") as file:
+		print(file.read())
+		for line in file.lines:
+			print(f"Line: {line}")
+except Error:
+	print("Error!")
+
+with open("data.txt", "w") as file:
+	file.write("Some text.")
+
+with open("data.txt", "a") as file
+	file.write("This is new line.\n")
+
+# Let's go deeper and explore object-oriented programming in Pallad.
+
+# You can remember first lines on this code:
+# ...
+# class Example
+# extends Object
+# ...
+# Every file in Pallad is (at least) one class,
+# "class" keyword can be used to customize class name,
+# otherwise file name will be used.
+# "extends" defines parent class, parent class of a file
+# without "extends ..." is "Object" class.
+
+# You can import other classes as module with "import"
+# "import *" imports any module in current folder:
+import *
+# Then you can use other classes in your code.
+
+# Regular variables are instance-level and separate between multiple
+# instances and can have different values in each instance, static
+# variables are class-level can have one value in all instances.
+# Also, you can use these variables without instancing class.
+static var count: int
+
+# Most of above code was in class body, this code will be ran at class
+# initialization time: when you run code or import this module from another
+# code. Pallad provides a special block to place these codes in more
+# specific place of code:
+static:
+	count = 0
+	print("At class initialize")
+# This block doesn't do anything else compared to free codes, you can skip
+# "static:" line when reading the code to see order of execution for free
+# codes. This is just an optional feature for better code formatting.
+
+# So everything since now was class-level, how we can create instances from
+# these classes?
+# In this case we have another file in current folder named "user.pd", so
+# we can import it to use this class:
+#import user
+# Wait! This is just a showcase and there isn't any other file, so we use
+# inner-classes to define our user:
+# Inner-class declaration will be moved to top.
+class User:
+    #extends Object # <- Optional
+
+    static var world_id: string
+    var name: string
+    var age: int
+
+    # You can place codes here, and codes will be ran when you run this file,
+    # because inner-classes will be initialized in same time as current class.
+    # Or you can use "static:" block to do same thing.
+
+    # A class can be instanced with "Class()" syntax (in this case: "User()").
+    # This will be done with constructors (each class have one default constructor).
+    # But we need to customize instances, so let's define our constructor.
+    # Before this, sometimes we need to initialize somethings before any instantiation
+    # (in this case we just want to show how!), Pallad provides "static constructor"
+    # for this need (this is optional, default static constructor always returns true):
+    static constructor -> bool:
+        if world_id == none or world_id == "":
+            print("Failed to initialize constructors!")
+            return false
+        print("Constructors initialized")
+        return true
+    # This constructor ensures any instance will be created in valid environment, as
+    # you can see this constructor returns a boolean that shows initialization was successful
+    # or no.
+
+    # And we can define standard constructors now:
+    constructor(name: string, age: int):
+        self.name = name
+        self.age = age
+        print("Instance created")
+
+    # Just to show overloading, we create another constructor:
+    constructor():
+        self.name = "Unknown"
+        self.age = 0
+        print("Instance created")
+    # Pallad will detect constructor signature based on parameters and calls the correct one.
+
+    # Like variables, instances can have functions.
+    func get_name() -> string:
+        return name
+
+    # Static functions can access only static variables.
+    static func get_world_id() -> string:
+        return world_id
+
+# Now we can use User class:
+User.world_id = "13x1c_43oiu"
+
+var alex := User("Alex", 32)
+var joe := User("Joe", -41)
+var unknown := User()
+
+# You can do more smart things with import:
+# Use "" for paths, otherwise don't use.
+
+# Use exclude before imports to limit imports.
+exclude test_module # "./test_module.pd" will not be imported anyway.
+
+import * # Everything in current folder
+
+# You can change class name at import:
+import "D:/Codes/personal_utils_v1" as PUtils # Imports personal_utils_v1.pd, ".pd" is optional
+
+# You can limit import to some inner classes:
+from os import process, path
+
+# You can mix imports with conditions:
+# config.pd exists in current folder and imported above.
+if config.enable_debugger:
+	from "../debugger/"  import * # Imports every module in "debugger" folder in upper directory, last "/" is required
+else:
+	import "../debugger/light_debugger" # Just imports "light_debugger.pd" module.
+
+# In other modules, "User" class must be used like this:
+#import Example
+#var user := Example.User()
+# or like this:
+#from Example import User
+#var user := User()
+
+# Constructors can be used in more styles:
+class AnotherUser:
+    var name: string
+    var age: int
+
+    constructor(): # Simple constructor
+        self.name = "Unknown"
+        self.age = 0
+
+    constructor(name: string): # Constructor with parameter
+        self.name = name
+        self.age = 0
+
+    constructor(name: string, age: int): # Overloading
+        self.name = name
+        self.age = age
+
+    constructor(copy: User): # Copy constructor
+        self.name = copy.name
+        self.age = copy.age

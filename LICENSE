@@ -1,0 +1,31 @@
+Pallad Proprietary Draft License
+Copyright © 2025 Mahan Khalili
+
+1. Ownership
+All rights related to the design, innovations, syntax, and features described in this project
+are the intellectual property of the Pallad project. No part of this project or its
+innovations may be used, modified, or redistributed without written permission from the owner.
+
+2. Usage Restrictions
+- Use of this project and its innovations is permitted exclusively within the Pallad project.
+- Any use in other projects, whether commercial or non-commercial, is strictly prohibited
+  until the official release of Pallad stable version 2.0.
+- Reverse engineering, copying, or reproducing parts of this project outside Pallad
+  constitutes a violation of this license.
+
+3. Distribution
+- Redistribution of this project or any part of it without written permission from the owner
+  is prohibited.
+- Public release is only permitted in the official Pallad project form.
+
+4. Liability
+This project and its innovations are provided "as is." The owner assumes no responsibility
+for errors, defects, or damages resulting from unauthorized use.
+
+5. Term
+This license remains valid until the official release of Pallad stable version 2.0.
+After the release of version 2.0, new licensing terms may replace this license.
+
+6. Governing Law
+This license is governed by international intellectual property and copyright laws,
+as well as the local laws of the owner’s jurisdiction.
