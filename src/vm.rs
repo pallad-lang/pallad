@@ -9,6 +9,13 @@ pub struct VM {
 }
 
 impl VM {
+    /// Constructs a new VM with an empty operand stack and an empty global variable store.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let _vm = VM::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             stack: vec![],
@@ -16,6 +23,35 @@ impl VM {
         }
     }
 
+    /// Executes a sequence of bytecode-like instructions on the virtual machine, updating the stack and globals.
+    ///
+    /// The VM processes each `Instr` in order, manipulating the operand stack and global variable store,
+    /// performing arithmetic, variable access, built-in calls (currently `print`), and stack operations.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PalladError` when execution fails, including but not limited to:
+    /// - `UndefinedVariable` if a `LoadVar` references a missing global.
+    /// - `StackUnderflow` when an instruction requires more stack values than available.
+    /// - `UnknownBuiltin` if `CallBuiltin` targets an unrecognized builtin.
+    /// - `DivisionByZero` for division/modulo by zero.
+    /// - `TypeMismatch` for unsupported operand type combinations (e.g., invalid types for `IntDiv`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::{VM, Instr, Value, PalladError};
+    ///
+    /// let mut vm = VM::new();
+    /// let program = vec![
+    ///     Instr::LoadInt(2),
+    ///     Instr::LoadInt(3),
+    ///     Instr::Add,
+    ///     Instr::CallBuiltin { name: "print".to_string(), argc: 1 },
+    /// ];
+    ///
+    /// assert!(vm.run(program).is_ok());
+    /// ```
     pub fn run(&mut self, program: Vec<Instr>) -> Result<(), PalladError> {
         for instr in program {
             match instr {
@@ -82,6 +118,49 @@ impl VM {
         Ok(())
     }
 
+    /// Pop two values from the VM stack and compute the binary operation identified by `op_name`.
+    ///
+    /// Supported operation names: `"Add"`, `"Sub"`, `"Mul"`, `"Div"`, `"IntDiv"`, and `"Mod"`.
+    /// On success returns the resulting `Value` produced by applying the operation to the second-to-top
+    /// stack value (left operand) and the top stack value (right operand).
+    ///
+    /// # Parameters
+    ///
+    /// - `op_name`: The operation to perform; must be one of the supported names above.
+    ///
+    /// # Returns
+    ///
+    /// The resulting `Value` for the performed operation, or an error for stack underflow, division by
+    /// zero (for `Div`, `IntDiv`, `Mod`), or a type mismatch when operands are incompatible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// // Minimal VM and Value setup for the example
+    /// #[derive(Debug, PartialEq)]
+    /// enum Value { Int(i64), Float(f64) }
+    /// struct VM { stack: Vec<Value>, globals: HashMap<String, Value> }
+    /// impl VM {
+    ///     fn new() -> Self { VM { stack: Vec::new(), globals: HashMap::new() } }
+    ///     fn pop_two_operands(&mut self, op_name: &str) -> Result<Value, String> {
+    ///         let b = self.stack.pop().ok_or("underflow")?;
+    ///         let a = self.stack.pop().ok_or("underflow")?;
+    ///         match (a, b, op_name) {
+    ///             (Value::Int(a), Value::Int(b), "Add") => Ok(Value::Int(a + b)),
+    ///             (Value::Float(a), Value::Float(b), "Add") => Ok(Value::Float(a + b)),
+    ///             _ => Err("type mismatch".to_string())
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// let mut vm = VM::new();
+    /// vm.stack.push(Value::Int(2));
+    /// vm.stack.push(Value::Int(3));
+    /// let res = vm.pop_two_operands("Add").expect("operation failed");
+    /// assert_eq!(res, Value::Int(5));
+    /// ```
     fn pop_two_operands(&mut self, op_name: &str) -> Result<Value, PalladError> {
         let b = self.stack.pop()
             .ok_or_else(|| PalladError::StackUnderflow { operation: op_name.to_string() })?;

@@ -20,6 +20,28 @@ pub enum Token {
     Eol,          // end of line
 }
 
+/// Convert source text into a sequence of lexical tokens for the language.
+///
+/// Processes the input line-by-line, stripping `#` comments and emitting tokens for
+/// identifiers, reserved keywords (`var`, `print`), integer and floating numeric literals,
+/// operators (`+`, `-`, `*`, `/`, `//`, `%`, `=`), parentheses, commas, and an end-of-line
+/// `Eol` token after each non-empty line.
+///
+/// # Returns
+///
+/// `Ok(Vec<Token>)` with the token stream on success, or `Err(PalladError)` if a lexical
+/// error is encountered (for example `InvalidNumber` for malformed numeric literals or
+/// `UnknownCharacter` for unexpected characters), with the error carrying the line number.
+///
+/// # Examples
+///
+/// ```
+/// let src = "var x = 42\nprint x\n";
+/// let tokens = tokenize(src).unwrap();
+/// // starts with: Var, Ident("x"), Eq, Int(42), Eol, Print, Ident("x"), Eol
+/// assert!(matches!(tokens.get(0), Some(Token::Var)));
+/// assert!(matches!(tokens.get(3), Some(Token::Int(42))));
+/// ```
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     let mut tokens = Vec::new();
 

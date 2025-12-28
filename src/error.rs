@@ -12,6 +12,22 @@ pub enum PalladError {
 }
 
 impl std::fmt::Display for PalladError {
+    /// Formats `PalladError` values into human-readable error messages.
+    ///
+    /// Each error variant is rendered with a concise description; variants that include a line number
+    /// include it in the message.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::error::PalladError;
+    ///
+    /// let e = PalladError::UnexpectedToken { got: "}".into(), expected: "identifier".into(), line: 3 };
+    /// assert_eq!(format!("{}", e), "Line 3: Expected identifier, got }");
+    ///
+    /// let e2 = PalladError::DivisionByZero { operation: "divide".into() };
+    /// assert_eq!(format!("{}", e2), "Division by zero at divide operation is not valid");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PalladError::UnexpectedToken { got, expected, line } =>
