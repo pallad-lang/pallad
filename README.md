@@ -36,7 +36,7 @@ Pallad is built on **Rust**. Provides a step-by-step code running:
       -> Compile
          -> Run
 ```
-+Each code is passed to the lexer, which converts the code's text to a list of tokens (tokenize). Then, tokens are passed to the parser to generate statements and create an AST, which is used by the compiler to transform to a bytecode-like stack (program). The program is passed to the VM for execution in order (in Rust).
+Code is passed to the lexer, which converts the text to a list of tokens (tokenize). Then, tokens are passed to the parser to generate statements and create an AST, which is used by the compiler to transform to a bytecode-like stack (program). The program is passed to the VM for execution in order (in Rust).
 
 ### Syntax
 Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python and GDScript: keywords and declarations define expressions, and indentation separates code blocks.
