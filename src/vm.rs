@@ -89,6 +89,17 @@ impl VM {
         let a = self.stack.pop()
             .ok_or_else(|| PalladError::StackUnderflow { operation: op_name.to_string() })?;
 
+        // Check for division by zero
+        if matches!(op_name, "Div" | "IntDiv" | "Mod") {
+            let is_zero = match &b {
+                Value::Int(n) => *n == 0,
+                Value::Float(f) => *f == 0.0,
+            };
+            if is_zero {
+                return Err(PalladError::DivisionByZero { operation: op_name.to_string() });
+            }
+        }
+
         Ok(match (a, b, op_name) {
             (Value::Int(a), Value::Int(b), "Add") => Value::Int(a + b),
             (Value::Int(a), Value::Float(b), "Add") => Value::Float(a as f64 + b),

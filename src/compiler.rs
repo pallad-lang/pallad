@@ -43,6 +43,12 @@ fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {
                 BinOp::Mod => program.push(Instr::Mod),
             }
         }
-        _ => {}
+        Expr::Call { name, args } => {
+            let argc = args.len();
+            for arg in args {
+                compile_expr(arg, program);
+            }
+            program.push(Instr::CallBuiltin { name, argc });
+        }
     }
 }

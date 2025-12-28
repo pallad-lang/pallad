@@ -93,23 +93,27 @@ impl Parser {
                     }
 
                     let mut args = vec![];
-                    loop {
-                        args.push(self.parse_expr()?);
-                        match self.current() {
-                            Some(Token::Comma) => { self.advance(); }
-                            Some(Token::RParen) => { self.advance(); break; }
-                            Some(other) => {
-                                return Err(PalladError::UnexpectedToken {
-                                    got: format!("{:?}", other),
-                                    expected: "',' or ')'".to_string(),
-                                    line: self.line,
-                                });
-                            }
-                            None => {
-                                return Err(PalladError::EndOfInput {
-                                    expected: "',' or ')'".to_string(),
-                                    line: self.line,
-                                });
+                    if let Some(Token::RParen) = self.current() {
+                        self.advance();
+                    } else {
+                        loop {
+                            args.push(self.parse_expr()?);
+                            match self.current() {
+                                Some(Token::Comma) => { self.advance(); }
+                                Some(Token::RParen) => { self.advance(); break; }
+                                Some(other) => {
+                                    return Err(PalladError::UnexpectedToken {
+                                        got: format!("{:?}", other),
+                                        expected: "',' or ')'".to_string(),
+                                        line: self.line,
+                                    });
+                                }
+                                None => {
+                                    return Err(PalladError::EndOfInput {
+                                        expected: "',' or ')'".to_string(),
+                                        line: self.line,
+                                    });
+                                }
                             }
                         }
                     }

@@ -35,11 +35,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 '0'..='9' => {
                     let mut num = String::new();
                     let mut is_float = false;
+                    let mut dot_count = 0;
                     while let Some(&c) = chars.peek() {
                         if c.is_numeric() {
                             num.push(c);
                             chars.next();
                         } else if c == '.' {
+                            dot_count += 1;
+                            if dot_count > 1 {
+                                return Err(PalladError::InvalidNumber {
+                                    value: num + ".",
+                                    line: line_no + 1,
+                                });
+                            }
                             is_float = true;
                             num.push(c);
                             chars.next();
@@ -48,9 +56,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         }
                     }
                     if is_float {
-                        tokens.push(Token::Float(num.parse().unwrap()));
+                        tokens.push(Token::Float(num.parse().map_err(|_| {
+                            PalladError::InvalidNumber { value: num.clone(), line: line_no + 1 }
+                        })?));
                     } else {
-                        tokens.push(Token::Int(num.parse().unwrap()));
+                        tokens.push(Token::Int(num.parse().map_err(|_| {
+                            PalladError::InvalidNumber { value: num.clone(), line: line_no + 1 }
+                        })?));
                     }
                 }
                 'a'..='z' | 'A'..='Z' => {

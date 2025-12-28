@@ -7,6 +7,8 @@ pub enum PalladError {
     UndefinedVariable { name: String },
     StackUnderflow { operation: String },
     TypeMismatch { operation: String },
+    InvalidNumber { value: String, line: usize },
+    DivisionByZero { operation: String },
 }
 
 impl std::fmt::Display for PalladError {
@@ -18,6 +20,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Line {}: Expected {}, got end of input", line, expected),
             PalladError::UnknownCharacter { got, line } =>
                 write!(f, "Line {}: Unknown character: {}", line, got),
+            PalladError::InvalidNumber { value, line } => 
+                write!(f, "Line {}: Invalid number: {}", line, value),
             PalladError::UnknownBuiltin { name } =>
                 write!(f, "Unknown builtin: {}", name),
             PalladError::UndefinedVariable { name } => 
@@ -26,6 +30,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Stack underflow: {}", operation),
             PalladError::TypeMismatch { operation } =>
                 write!(f, "Type mismatch: {}", operation),
+            PalladError::DivisionByZero { operation } =>
+                write!(f, "Division by zero at {} operation is not valid", operation)
         }
     }
 }

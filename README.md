@@ -29,14 +29,14 @@ Pallad is inspired by Python, GDScript, C++, Java, and others. It attempts to ov
 ## Features
 
 ### Implementation
-Pallad is built on **Rust**. Provides a step by step code running:
+Pallad is built on **Rust**. Provides a step-by-step code running:
 ```text
 -> Tokenize
    -> Parse
       -> Compile
          -> Run
 ```
-Each code will be passed to lexer, lexer converts code's text to a list of tokens (tokenize). Then, tokens will be passed to parser to generate statements and create a AST, which will be used in compiler to trasform to a bytecode-like stack (program). Program will be passed to VM to execute in order (in Rust).
++Each code is passed to the lexer, which converts the code's text to a list of tokens (tokenize). Then, tokens are passed to the parser to generate statements and create an AST, which is used by the compiler to transform to a bytecode-like stack (program). The program is passed to the VM for execution in order (in Rust).
 
 ### Syntax
 Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python and GDScript: keywords and declarations define expressions, and indentation separates code blocks.
@@ -155,7 +155,7 @@ else:
 - [Examples](examples/)
 
 ## Project Status
-This project is currently in first development states.
+This project is currently in first development stage.
 
 ### Current Features
 This is a list of currently implemented features.
@@ -171,7 +171,7 @@ This is a list of currently implemented features.
   - `/` - `int`, `float`
   - `//` - `int`, `float`
   - `%` - `int`, `float`
-- Butilin functions:
+- Built-in functions:
   - `print`
 
 ### Known Issues
