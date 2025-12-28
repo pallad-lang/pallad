@@ -43,7 +43,13 @@ fn main() {
         }
     };
 
-    let program = compile(stmts);
+    let program = match compile(stmts) {
+        Ok(s) => s,
+        Err(err) => {
+            eprintln!("Compile error: {}", err);
+            return;
+        }
+    };
 
     let mut vm = VM::new();
     if let Err(err) = vm.run(program) {

@@ -1,7 +1,8 @@
 use crate::ast::{Stmt, Expr, BinOp};
+use crate::error::PalladError;
 use crate::ir::Instr;
 
-pub fn compile(stmts: Vec<Stmt>) -> Vec<Instr> {
+pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
     let mut program = vec![];
 
     for stmt in stmts {
@@ -23,7 +24,7 @@ pub fn compile(stmts: Vec<Stmt>) -> Vec<Instr> {
         }
     }
 
-    program
+    Ok(program)
 }
 
 fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {

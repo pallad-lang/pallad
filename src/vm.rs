@@ -22,9 +22,8 @@ impl VM {
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
                 Instr::LoadFloat(f) => self.stack.push(Value::Float(f)),
                 Instr::LoadVar(name) => {
-                    let val = self.globals.get(&name)
-                        .ok_or_else(|| PalladError::UndefinedVariable { name: name.clone() })?
-                        .clone();
+                    let val = *self.globals.get(&name)
+                        .ok_or_else(|| PalladError::UndefinedVariable { name: name.clone() })?;
                     self.stack.push(val);
                 }
                 Instr::StoreVar(name) => {
@@ -122,9 +121,9 @@ impl VM {
             (Value::Float(a), Value::Float(b), "Div") => Value::Float(a / b),
 
             (Value::Int(a), Value::Int(b), "IntDiv") => Value::Int(a / b),
-            (Value::Int(a), Value::Float(b), "IntDiv") => Value::Int(a / b as i64),
-            (Value::Float(a), Value::Int(b), "IntDiv") => Value::Int(a as i64 / b),
-            (Value::Float(a), Value::Float(b), "IntDiv") => Value::Int(a as i64 / b as i64),
+            (Value::Int(a), Value::Float(b), "IntDiv") => Value::Int((a as f64 / b).floor() as i64),
+            (Value::Float(a), Value::Int(b), "IntDiv") => Value::Int((a / b as f64).floor() as i64),
+            (Value::Float(a), Value::Float(b), "IntDiv") => Value::Int((a / b).floor() as i64),
 
             (Value::Int(a), Value::Int(b), "Mod") => Value::Int(a % b),
             (Value::Int(a), Value::Float(b), "Mod") => Value::Float(a as f64 % b),
