@@ -12,10 +12,11 @@ pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
                 program.push(Instr::StoreVar(name));
             }
             Stmt::Expr(Expr::Call { name, args }) => {
-                for arg in &args {
-                    compile_expr(arg.clone(), &mut program);
+                let argc = args.len();
+                for arg in args {
+                    compile_expr(arg, &mut program);
                 }
-                program.push(Instr::CallBuiltin { name, argc: args.len() });
+                program.push(Instr::CallBuiltin { name, argc });
             }
             Stmt::Expr(expr) => {
                 compile_expr(expr, &mut program);

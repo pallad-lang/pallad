@@ -121,9 +121,30 @@ impl VM {
             (Value::Float(a), Value::Float(b), "Div") => Value::Float(a / b),
 
             (Value::Int(a), Value::Int(b), "IntDiv") => Value::Int(a / b),
-            (Value::Int(a), Value::Float(b), "IntDiv") => Value::Int((a as f64 / b).floor() as i64),
-            (Value::Float(a), Value::Int(b), "IntDiv") => Value::Int((a / b as f64).floor() as i64),
-            (Value::Float(a), Value::Float(b), "IntDiv") => Value::Int((a / b).floor() as i64),
+            (Value::Int(a), Value::Float(b), "IntDiv") => {
+                let result = (a as f64 / b).floor();
+                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                    Value::Int(result as i64)
+                } else {
+                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                }
+            }
+            (Value::Float(a), Value::Int(b), "IntDiv") => {
+                let result = (a / b as f64).floor();
+                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                    Value::Int(result as i64)
+                } else {
+                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                }
+            }
+            (Value::Float(a), Value::Float(b), "IntDiv") => {
+                let result = (a / b).floor();
+                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                    Value::Int(result as i64)
+                } else {
+                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                }
+            }
 
             (Value::Int(a), Value::Int(b), "Mod") => Value::Int(a % b),
             (Value::Int(a), Value::Float(b), "Mod") => Value::Float(a as f64 % b),
