@@ -176,7 +176,7 @@ This is a list of currently implemented features.
 
 ### Known Issues
 This is a list of known missing points about implemented features listed above:
-- `var` keyword without initial value rise parse error `Expected '=', got EOL` (`parser.rs:55-70`)
+- `var` keyword without initial value raises parse error `Expected '=', got Eol` (`parser.rs:55-70`)
 
 ### Future Improvements
 - **Design:**  

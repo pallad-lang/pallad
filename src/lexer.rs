@@ -17,7 +17,7 @@ pub enum Token {
     LParen,       // '('
     RParen,       // ')'
     Comma,        // ',' 
-    EOL,          // end of line
+    Eol,          // end of line
 }
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
@@ -106,7 +106,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 },
             }
         }
-        tokens.push(Token::EOL);
+        tokens.push(Token::Eol);
     } 
 
     Ok(tokens)

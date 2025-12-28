@@ -18,7 +18,7 @@ impl Parser {
     }
 
     fn advance(&mut self) {
-        if let Some(Token::EOL) = self.current() {
+        if let Some(Token::Eol) = self.current() {
             self.line += 1;
         }
         self.pos += 1;
@@ -121,7 +121,7 @@ impl Parser {
                     stmts.push(Stmt::Expr(Expr::Call { name: "print".to_string(), args }));
                 }
 
-                Token::EOL => { self.advance(); }
+                Token::Eol => { self.advance(); }
 
                 other => {
                     return Err(PalladError::UnexpectedToken {

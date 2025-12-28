@@ -1,5 +1,4 @@
-var a = 5 / 2.1.2      # 2.5 (float)
+var a = 5 / 2      # 2.5 (float)
 var b = 5 // 2     # 2 (integer)
 var c = 5 % 2      # 1
 print(a, b, c)
-var d

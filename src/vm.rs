@@ -16,7 +16,7 @@ impl VM {
         }
     }
 
-    pub fn run(&mut self, program: Vec<Instr>) -> Result<bool, PalladError> {
+    pub fn run(&mut self, program: Vec<Instr>) -> Result<(), PalladError> {
         for instr in program {
             match instr {
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
@@ -80,7 +80,7 @@ impl VM {
                 }
             }
         }
-        Ok(true)
+        Ok(())
     }
 
     fn pop_two_operands(&mut self, op_name: &str) -> Result<Value, PalladError> {

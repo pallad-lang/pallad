@@ -1,3 +1,4 @@
+use std::env;
 mod ast;
 mod lexer;
 mod parser;
@@ -14,7 +15,8 @@ use crate::compiler::compile;
 use crate::vm::VM;
 
 fn main() {
-    let filename = "examples/example.pd";
+    let args: Vec<String> = env::args().collect();
+    let filename = args.get(1).map(|s| s.as_str()).unwrap_or("examples/example.pd");
 
     let code = match fs::read_to_string(filename) {
         Ok(c) => c,
