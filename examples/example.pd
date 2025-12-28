@@ -1,0 +1,7 @@
+var a = 5 / 2      # 2.5 (float)
+var b = 5 // 2     # 2 (integer)
+var c = 5 % 2      # 1
+var d = -5         # -5
+var e = -a         # -2.5
+var f = -(b * 4)   # -8
+print(a, b, c, d, e, f)
