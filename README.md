@@ -2,10 +2,10 @@
 <img src="assets/logo.png" alt="Pallad Logo" width="160"/>
 </div>
 
-**Pallad** is a high-level programming language inspired by scientific clarity and elemental precision. It blends the simplicity of scripting languages with powerful control and advanced features.
+**Pallad** is a high-level hybrid programming language inspired by scientific clarity and elemental precision. It blends the simplicity of scripting languages with powerful control and advanced features.
 
 > [!Important]  
-> Pallad is currently in the design and concept stage. See the License and Markdown files for more information.
+> Pallad is currently in the design and concept stage with very first implementation. See the License and Markdown files for more information.
 
 ## Introduction
 
@@ -27,6 +27,16 @@ It reflects the vision of a language that is **elemental, precise, and globally 
 Pallad is inspired by Python, GDScript, C++, Java, and others. It attempts to overcome their limitations by combining their strengths. At the same time, it remains a standalone language with unique features and structures rarely seen elsewhere, most of which focus on enhanced code control—a major advantage for a scripting language.
 
 ## Features
+
+### Implementation
+Pallad is built on **Rust**. Provides a step by step code running:
+```text
+-> Tokenize
+   -> Parse
+      -> Compile
+         -> Run
+```
+Each code will be passed to lexer, lexer converts code's text to a list of tokens (tokenize). Then, tokens will be passed to parser to generate statements and create a AST, which will be used in compiler to trasform to a bytecode-like stack (program). Program will be passed to VM to execute in order (in Rust).
 
 ### Syntax
 Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python and GDScript: keywords and declarations define expressions, and indentation separates code blocks.
@@ -145,7 +155,28 @@ else:
 - [Examples](examples/)
 
 ## Project Status
-This project is currently a concept. The most active area of development is design.
+This project is currently in first development states.
+
+### Current Features
+This is a list of currently implemented features.
+- Keywords:
+  - `var`
+- Types:
+  - `int`
+  - `float`
+- Operators:
+  - `+` - `int`, `float`
+  - `-` - `int`, `float`
+  - `*` - `int`, `float`
+  - `/` - `int`, `float`
+  - `//` - `int`, `float`
+  - `%` - `int`, `float`
+- Butilin functions:
+  - `print`
+
+### Known Issues
+This is a list of known missing points about implemented features listed above:
+- `var` keyword without initial value rise parse error `Expected '=', got EOL` (`parser.rs:55-70`)
 
 ### Future Improvements
 - **Design:**  
