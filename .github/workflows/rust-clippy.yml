@@ -36,31 +36,16 @@ jobs:
         with:
           components: clippy
 
-      - name: Cache cargo tools
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-tools-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-tools-
-      
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-
       - name: Install required cargo tools
-        run: cargo install clippy-sarif sarif-fmt
+        run: |
+          if command -v clippy-sarif >/dev/null && command -v sarif-fmt >/dev/null; then
+            echo "clippy-sarif and sarif-fmt found in cache — skipping install"
+          else
+            cargo install clippy-sarif sarif-fmt --force
+          fi
 
       - name: Run rust-clippy
-        run:
+        run: |
           set -o pipefail
           cargo clippy
           --workspace
