@@ -4,27 +4,25 @@
 
 **Pallad** is a high-level hybrid programming language inspired by scientific clarity and elemental precision. It blends the simplicity of scripting languages with powerful control and advanced features.
 
-> [!Important]  
-> Pallad is currently in the design and concept stage with very first implementation. See the License and Markdown files for more information.
+> [!Important]
+> Pallad is currently in the design and concept stage with very first implementation. See the License and [Project Status](#project-status) section below for more information.
 
 ## Introduction
 
 ### Design
-Pallad is designed to be a principled and versatile language that makes programming easier while remaining scientifically grounded. With the rise of AI-assisted coding, Pallad aims to simplify code generation, review, and modification. It is highly adaptable, capable of compiling into multiple languages, and allows for easy implementation of custom features.
+Pallad is a principled, versatile language that simplifies programming while staying scientifically grounded. With AI-assisted coding on the rise, Pallad streamlines code generation, review, and modification. It’s highly adaptable, able to compile into multiple languages, and supports easy integration of custom features.
 
 ### Philosophy
-Pallad follows the philosophy of **clarity and control**. Everything is simple by default, but when you switch to manual mode, full control is entirely yours.  
-This makes Pallad suitable both for learning programming and for building complex systems.
+Pallad follows the philosophy of **clarity and control**. Everything is simple by default, but when you switch to manual mode, full control is entirely yours. This makes Pallad suitable both for learning programming and for building complex systems.
+
+### Name
+The name **Pallad** is derived from the element *Palladium* (symbol **Pd**, atomic number 46). It reflects the vision of a language that is **elemental, precise, and globally resonant**—a foundation as strong and valuable as the metal itself. You may see Pd instead of Pallad in this repo, docs, etc.
+
+### Inspiration
+Pallad is inspired by Python, GDScript, C++, Java, JavaScript, and others. It attempts to overcome their limitations by combining their strengths. At the same time, it remains a standalone language with unique features and structures rarely seen elsewhere, most of which focus on enhanced code control—a major advantage for a scripting language.
 
 ### Comparison
 Pallad learns from other languages to improve itself, while maintaining a unified environment where all features are consistent and aligned with its core vision. As a high-level language, it offers simple syntax and manages many operations by default.
-
-## Name
-The name **Pallad** is derived from the element *Palladium* (symbol **Pd**, atomic number 46).  
-It reflects the vision of a language that is **elemental, precise, and globally resonant**—a foundation as strong and valuable as the metal itself. You may see Pd instead of Pallad in this repo, docs, etc.
-
-## Inspiration
-Pallad is inspired by Python, GDScript, C++, Java, and others. It attempts to overcome their limitations by combining their strengths. At the same time, it remains a standalone language with unique features and structures rarely seen elsewhere, most of which focus on enhanced code control—a major advantage for a scripting language.
 
 ## Features
 
@@ -42,58 +40,124 @@ Code is passed to the lexer, which converts the text to a list of tokens (tokeni
 Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python and GDScript: keywords and declarations define expressions, and indentation separates code blocks.
 
 ### Special Features
-> [!Note]  
+> [!Note]
 > For more details on special features, see the example files and syntax guide.
 
 Pallad offers unique features focused on simplicity and programmer quality of life (common features from Python and others are omitted here):
-- Built-in docstring formatter  
-- Keywords for navigation and code organization  
-- Expression validation wherever possible  
-- Dynamic typing by default  
-- Optional setters & getters for variables  
-- Rich, dynamic, and composite data types:  
-  - States  
-  - Sets  
-  - Pairs  
-  - Triplets  
-  - Char  
-  - Multi-dimensional arrays  
-  - Tables  
-  - Queues  
-  - Callable  
-  - Color  
-- Full optional support for static typing  
-- Simple public & private access modifiers  
-- Variable argument functions  
-- Named parameters  
-- Lambda functions  
-- Signals  
-- Powerful enums:  
-  - Anonymous enums  
-  - Anonymous shadow  
-  - Named enums  
-  - Enums as types  
-- `switch` / `case` / `default`  
-- Advanced loops with monitoring  
-- Bitwise operations  
-- `in` / `not in`  
-- `try` / `except` / `else` / `finally`  
-- `raise` / `assert`  
-- Internal logging  
-- Simple I/O  
-- `with` environment manager  
-- Internal file management  
-- Object-oriented programming  
-- `class` / `extends`  
-- `import` / `exclude`  
-- Static variables and functions  
-- Static constructors  
-- Constructors with overloading  
-- `static` blocks  
-- Inner classes  
+- Hybrid: Compile to Bytecode, interpret the bytecode
+- Support transpile to other languages besides the interpreter
+- Built-in docstring formatter
+- Keywords for navigation and code organization
+- Expression validation wherever possible
+- Dynamic typing by default
+- Optional setters & getters for variables
+- Rich, dynamic, and composite data types:
+  - States
+  - Sets
+  - Pairs
+  - Triplets
+  - Char
+  - Multi-dimensional arrays
+  - Tables
+  - Queues
+  - Callable
+  - Color
+- Full optional support for static typing
+- Simple public & private access modifiers
+- Variable argument functions
+- Named parameters
+- Lambda functions
+- Signals
+- Powerful enums:
+  - Anonymous enums
+  - Anonymous shadow
+  - Named enums
+  - Enums as types
+- `switch` / `case` / `default`
+- Advanced loops with monitoring
+- Bitwise operations
+- `in` / `not in`
+- `try` / `except` / `else` / `finally`
+- `raise` / `assert`
+- Internal logging
+- Simple I/O
+- `with` environment manager
+- Internal file management
+- Object-oriented programming
+- `class` / `extends`
+- `import` / `exclude`
+- Static variables and functions
+- Static constructors
+- Constructors with overloading
+- `static` blocks
+- Inner classes
+
+## Project Status
+This project is currently in its first development stage.
+
+### Current Features
+This is a list of currently implemented features.
+- Comments:
+  - Single line with `#`
+- Keywords:
+  - `var`
+- Types:
+  - `int`
+  - `float`
+- Operators:
+  - `+` - `int`, `float`
+  - `-` - `int`, `float`
+  - `*` - `int`, `float`
+  - `/` - `int`, `float`
+  - `//` - `int`, `float`
+  - `%` - `int`, `float`
+- Built-in functions:
+  - `print`
+
+### Known Issues
+This is a list of known missing points about implemented features listed above:
+- `parser.rs:55-70`: `var` keyword without initial value raises parse error `Expected '=', got Eol`.
+- `parser.rs:324-360`: Multi-line expressions raises parse error `Expected integer, float, variable, or '(', got Eol`.
+- `vm.rs:103-128`: Integer operations can overflow, values wrap silently.
+
+> [!Note]
+> The items on this list have been queued for resolution.
+
+### Future Improvements
+- **Design:**
+  - Plan for async functionality
+  - New types:
+    - Date / Time / Duration
+    - Struct / Record
+  - Mixed types behavior
+  - Plan for pattern matching
+  - Macro / Metaprogramming
+  - Reflection / Introspection
+  - Multi-threading / Parallel execution
+  - Foreign Function Interface
+- **Core:**
+  - Transpile feature
+- **Standard Library:**
+  - date/time
+  - networking
+  - math
+  - file system utilities
+  - regex/pattern matching
+  - serialization
+- **Tooling & Ecosystem:**
+  - Package Manager
+  - Formatter/Linter
+  - Debugger
+  - REPL
+  - LSP Server
+- **Community & Documentation:**
+  - Tutorials & Examples
+  - Syntax highlighter
+  - Test suite
+  - Discussion/Ideas
 
 ## Install
-Pallad is not yet implemented and currently has no public interpreter or compiler.
+Pallad is not yet released as any tagged version, so you need to compile it from source to use it. You need Rust (with Cargo) and a clone of the git repository. When you run `cargo run` in the repository root, binaries will be generated in the `target/` directory. You can use `pallad "path/to/code.pd"` to run your Pallad code.
 
 ## Examples
 
@@ -154,72 +218,8 @@ else:
 - [Syntax Guide](spec/syntax.md)
 - [Examples](examples/)
 
-## Project Status
-This project is currently in first development stage.
-
-### Current Features
-This is a list of currently implemented features.
-- Keywords:
-  - `var`
-- Types:
-  - `int`
-  - `float`
-- Operators:
-  - `+` - `int`, `float`
-  - `-` - `int`, `float`
-  - `*` - `int`, `float`
-  - `/` - `int`, `float`
-  - `//` - `int`, `float`
-  - `%` - `int`, `float`
-- Built-in functions:
-  - `print`
-
-### Known Issues
-This is a list of known missing points about implemented features listed above:
-- `parser.rs:55-70`: `var` keyword without initial value raises parse error `Expected '=', got Eol`.
-- `vm.rs:103-128`: Integer operations can overflow, values wrap silently.
-
-> [!Note]
-> The items on this list have been queued for resolution.
-
-### Future Improvements
-- **Design:**  
-  - Decide whether Pallad will be a compiler, interpreter, or both  
-  - Plan for async functionality 
-  - New types:
-    - Date / Time / Duration
-    - Struct / Record
-  - Mixed types behavior
-  - Plan for pattern matching
-  - Macro / Metaprogramming
-  - Reflection / Introspection
-  - Multi-threading / Parallel execution
-  - Foreign Function Interface
-- **Core:**  
-  - Choose the primary implementation language  
-  - Implement interpreter/compiler
-  - Transpile feature
-- **Standard Library:**
-  - date/time
-  - networking
-  - math
-  - file system utilities
-  - regex/pattern matching
-  - serialization
-- **Tooling & Ecosystem:**
-  - Package Manager
-  - Formatter/Linter
-  - Debugger
-  - REPL
-  - LSP Server
-- **Community & Documentation:**
-  - Tutorials & Examples
-  - Syntax highlighter
-  - Test suite
-  - Discussion/Ideas
-
 ## Contribution
-Since Pallad is currently just a concept without even an experimental interpreter or compiler, contributions are more valuable in improving the concept rather than implementation. Contributions can be made via PRs and issues.
+Pallad is in early development. Contributions of all kinds—whether refining the language concept, improving the implementation, writing tests, or opening issues—are welcome. Please open PRs and issues to contribute.
 
 ## License
 ```text
