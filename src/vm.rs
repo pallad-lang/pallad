@@ -58,7 +58,8 @@ impl VM {
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
                 Instr::LoadFloat(f) => self.stack.push(Value::Float(f)),
                 Instr::LoadVar(name) => {
-                    let val = *self.globals.get(&name)
+                    let val = self.globals.get(&name)
+                        .cloned()
                         .ok_or_else(|| PalladError::UndefinedVariable { name: name.clone() })?;
                     self.stack.push(val);
                 }
@@ -68,28 +69,22 @@ impl VM {
                     self.globals.insert(name, val);
                 }
                 Instr::Add => {
-                    let result = self.pop_two_operands("Add")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("Add")?;
                 }
                 Instr::Sub => {
-                    let result = self.pop_two_operands("Sub")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("Sub")?;
                 }
                 Instr::Mul => {
-                    let result = self.pop_two_operands("Mul")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("Mul")?;
                 }
                 Instr::Div => {
-                    let result = self.pop_two_operands("Div")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("Div")?;
                 }
                 Instr::IntDiv => {
-                    let result = self.pop_two_operands("IntDiv")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("IntDiv")?;
                 }
                 Instr::Mod => {
-                    let result = self.pop_two_operands("Mod")?;
-                    self.stack.push(result);
+                    self.execute_arithmetic("Mod")?;
                 }
                 Instr::CallBuiltin { name, argc } => {
                     if name == "print" {
@@ -98,8 +93,7 @@ impl VM {
                             args.push(self.stack.pop()
                                 .ok_or_else(|| PalladError::StackUnderflow { operation: "print".to_string() })?);
                         }
-                        args.reverse();
-                        for arg in args {
+                        for arg in args.into_iter().rev() {
                             match arg {
                                 Value::Int(n) => println!("{}", n),
                                 Value::Float(f) => println!("{}", f),
@@ -115,6 +109,17 @@ impl VM {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Executes a binary arithmetic operation by popping two operands and
+    /// pushing the resulting value back onto the stack.
+    ///
+    /// The `op_name` parameter is used for error reporting to indicate which
+    /// operation caused a stack underflow in `pop_two_operands`.
+    fn execute_arithmetic(&mut self, op_name: &str) -> Result<(), PalladError> {
+        let result = self.pop_two_operands(op_name)?;
+        self.stack.push(result);
         Ok(())
     }
 
