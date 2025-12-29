@@ -2,6 +2,7 @@
 pub enum Expr {
     Int(i64),
     Float(f64),
+    Str(String),
     Var(String),
     Binary {
         left: Box<Expr>,

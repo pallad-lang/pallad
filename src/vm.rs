@@ -3,6 +3,28 @@ use crate::error::PalladError;
 use crate::value::Value;
 use crate::ir::Instr;
 
+enum Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    IntDiv,
+    Mod,
+}
+
+impl Op {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Op::Add => "add",
+            Op::Sub => "subtract",
+            Op::Mul => "multiply",
+            Op::Div => "divide",
+            Op::IntDiv => "integer-divide",
+            Op::Mod => "mod",
+        }
+    }
+}
+
 pub struct VM {
     stack: Vec<Value>,
     globals: HashMap<String, Value>,
@@ -57,46 +79,48 @@ impl VM {
             match instr {
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
                 Instr::LoadFloat(f) => self.stack.push(Value::Float(f)),
+                Instr::LoadStr(s) => self.stack.push(Value::Str(s)),
                 Instr::LoadVar(name) => {
                     let val = self.globals.get(&name)
                         .cloned()
-                        .ok_or_else(|| PalladError::UndefinedVariable { name: name.clone() })?;
+                        .ok_or(PalladError::UndefinedVariable { name: name.clone() })?;
                     self.stack.push(val);
                 }
                 Instr::StoreVar(name) => {
                     let val = self.stack.pop()
-                        .ok_or_else(|| PalladError::StackUnderflow { operation: "StoreVar".to_string() })?;
+                        .ok_or(PalladError::StackUnderflow { operation: "store variable" })?;
                     self.globals.insert(name, val);
                 }
                 Instr::Add => {
-                    self.execute_arithmetic("Add")?;
+                    self.execute_arithmetic(Op::Add)?;
                 }
                 Instr::Sub => {
-                    self.execute_arithmetic("Sub")?;
+                    self.execute_arithmetic(Op::Sub)?;
                 }
                 Instr::Mul => {
-                    self.execute_arithmetic("Mul")?;
+                    self.execute_arithmetic(Op::Mul)?;
                 }
                 Instr::Div => {
-                    self.execute_arithmetic("Div")?;
+                    self.execute_arithmetic(Op::Div)?;
                 }
                 Instr::IntDiv => {
-                    self.execute_arithmetic("IntDiv")?;
+                    self.execute_arithmetic(Op::IntDiv)?;
                 }
                 Instr::Mod => {
-                    self.execute_arithmetic("Mod")?;
+                    self.execute_arithmetic(Op::Mod)?;
                 }
                 Instr::CallBuiltin { name, argc } => {
                     if name == "print" {
                         let mut args = Vec::with_capacity(argc);
                         for _ in 0..argc {
                             args.push(self.stack.pop()
-                                .ok_or_else(|| PalladError::StackUnderflow { operation: "print".to_string() })?);
+                                .ok_or(PalladError::StackUnderflow { operation: "print" })?);
                         }
                         for arg in args.into_iter().rev() {
                             match arg {
                                 Value::Int(n) => println!("{}", n),
                                 Value::Float(f) => println!("{}", f),
+                                Value::Str(s) => println!("{}", s),
                             }
                         }
                     } else {
@@ -105,7 +129,7 @@ impl VM {
                 }
                 Instr::Pop => {
                     self.stack.pop()
-                        .ok_or_else(|| PalladError::StackUnderflow { operation: "Pop".to_string() })?;
+                        .ok_or(PalladError::StackUnderflow { operation: "Pop" })?;
                 }
             }
         }
@@ -115,23 +139,23 @@ impl VM {
     /// Executes a binary arithmetic operation by popping two operands and
     /// pushing the resulting value back onto the stack.
     ///
-    /// The `op_name` parameter is used for error reporting to indicate which
+    /// The `op` parameter is used for error reporting to indicate which
     /// operation caused a stack underflow in `pop_two_operands`.
-    fn execute_arithmetic(&mut self, op_name: &str) -> Result<(), PalladError> {
-        let result = self.pop_two_operands(op_name)?;
+    fn execute_arithmetic(&mut self, op: Op) -> Result<(), PalladError> {
+        let result = self.pop_two_operands(op)?;
         self.stack.push(result);
         Ok(())
     }
 
-    /// Pop two values from the VM stack and compute the binary operation identified by `op_name`.
+    /// Pop two values from the VM stack and compute the binary operation identified by `op`.
     ///
-    /// Supported operation names: `"Add"`, `"Sub"`, `"Mul"`, `"Div"`, `"IntDiv"`, and `"Mod"`.
+    /// Supported operation names: `Op` enum.
     /// On success returns the resulting `Value` produced by applying the operation to the second-to-top
     /// stack value (left operand) and the top stack value (right operand).
     ///
     /// # Parameters
     ///
-    /// - `op_name`: The operation to perform; must be one of the supported names above.
+    /// - `op`: The operation to perform; must be one of the supported names above.
     ///
     /// # Returns
     ///
@@ -149,12 +173,12 @@ impl VM {
     /// struct VM { stack: Vec<Value>, globals: HashMap<String, Value> }
     /// impl VM {
     ///     fn new() -> Self { VM { stack: Vec::new(), globals: HashMap::new() } }
-    ///     fn pop_two_operands(&mut self, op_name: &str) -> Result<Value, String> {
+    ///     fn pop_two_operands(&mut self, op: Op) -> Result<Value, String> {
     ///         let b = self.stack.pop().ok_or("underflow")?;
     ///         let a = self.stack.pop().ok_or("underflow")?;
-    ///         match (a, b, op_name) {
-    ///             (Value::Int(a), Value::Int(b), "Add") => Ok(Value::Int(a + b)),
-    ///             (Value::Float(a), Value::Float(b), "Add") => Ok(Value::Float(a + b)),
+    ///         match (a, b, op) {
+    ///             (Value::Int(a), Value::Int(b), Op::Add) => Ok(Value::Int(a + b)),
+    ///             (Value::Float(a), Value::Float(b), Op::Add) => Ok(Value::Float(a + b)),
     ///             _ => Err("type mismatch".to_string())
     ///         }
     ///     }
@@ -163,79 +187,109 @@ impl VM {
     /// let mut vm = VM::new();
     /// vm.stack.push(Value::Int(2));
     /// vm.stack.push(Value::Int(3));
-    /// let res = vm.pop_two_operands("Add").expect("operation failed");
+    /// let res = vm.pop_two_operands(Op::Add).expect("operation failed");
     /// assert_eq!(res, Value::Int(5));
     /// ```
-    fn pop_two_operands(&mut self, op_name: &str) -> Result<Value, PalladError> {
+    fn pop_two_operands(&mut self, op: Op) -> Result<Value, PalladError> {
         let b = self.stack.pop()
-            .ok_or_else(|| PalladError::StackUnderflow { operation: op_name.to_string() })?;
+            .ok_or(PalladError::StackUnderflow { operation: op.name() })?;
         let a = self.stack.pop()
-            .ok_or_else(|| PalladError::StackUnderflow { operation: op_name.to_string() })?;
+            .ok_or(PalladError::StackUnderflow { operation: op.name() })?;
 
         // Check for division by zero
-        if matches!(op_name, "Div" | "IntDiv" | "Mod") {
+        if matches!(op, Op::Div | Op::IntDiv | Op::Mod) {
             let is_zero = match &b {
                 Value::Int(n) => *n == 0,
                 Value::Float(f) => *f == 0.0,
+                Value::Str(_s) => false,
             };
             if is_zero {
-                return Err(PalladError::DivisionByZero { operation: op_name.to_string() });
+                return Err(PalladError::DivisionByZero { operation: op.name() });
             }
         }
 
-        Ok(match (a, b, op_name) {
-            (Value::Int(a), Value::Int(b), "Add") => Value::Int(a + b),
-            (Value::Int(a), Value::Float(b), "Add") => Value::Float(a as f64 + b),
-            (Value::Float(a), Value::Int(b), "Add") => Value::Float(a + b as f64),
-            (Value::Float(a), Value::Float(b), "Add") => Value::Float(a + b),
+        Ok(match (&a, &b, &op) {
+            (Value::Int(a), Value::Int(b), Op::Add) => Value::Int(a + b),
+            (Value::Int(a), Value::Float(b), Op::Add) => Value::Float(*a as f64 + b),
+            (Value::Int(a), Value::Str(b), Op::Add) => Value::Str(a.to_string() + b),
+            (Value::Float(a), Value::Int(b), Op::Add) => Value::Float(a + *b as f64),
+            (Value::Float(a), Value::Float(b), Op::Add) => Value::Float(a + b),
+            (Value::Float(a), Value::Str(b), Op::Add) => Value::Str(a.to_string() + b),
+            (Value::Str(a), Value::Int(b), Op::Add) => Value::Str(a.clone() + &b.to_string()),
+            (Value::Str(a), Value::Float(b), Op::Add) => Value::Str(a.clone() + &b.to_string()),
+            (Value::Str(a), Value::Str(b), Op::Add) => Value::Str(a.clone() + b),
 
-            (Value::Int(a), Value::Int(b), "Sub") => Value::Int(a - b),
-            (Value::Int(a), Value::Float(b), "Sub") => Value::Float(a as f64 - b),
-            (Value::Float(a), Value::Int(b), "Sub") => Value::Float(a - b as f64),
-            (Value::Float(a), Value::Float(b), "Sub") => Value::Float(a - b),
+            // Invalid: Str - any, any - Str
+            (Value::Int(a), Value::Int(b), Op::Sub) => Value::Int(a - b),
+            (Value::Int(a), Value::Float(b), Op::Sub) => Value::Float(*a as f64 - b),
+            (Value::Float(a), Value::Int(b), Op::Sub) => Value::Float(a - *b as f64),
+            (Value::Float(a), Value::Float(b), Op::Sub) => Value::Float(a - b),
 
-            (Value::Int(a), Value::Int(b), "Mul") => Value::Int(a * b),
-            (Value::Int(a), Value::Float(b), "Mul") => Value::Float(a as f64 * b),
-            (Value::Float(a), Value::Int(b), "Mul") => Value::Float(a * b as f64),
-            (Value::Float(a), Value::Float(b), "Mul") => Value::Float(a * b),
+            // Invalid: any * Str, Str * Float, Str * Str
+            (Value::Int(a), Value::Int(b), Op::Mul) => Value::Int(a * b),
+            (Value::Int(a), Value::Float(b), Op::Mul) => Value::Float(*a as f64 * b),
+            (Value::Float(a), Value::Int(b), Op::Mul) => Value::Float(a * *b as f64),
+            (Value::Float(a), Value::Float(b), Op::Mul) => Value::Float(a * b),
+            (Value::Str(a), Value::Int(b), Op::Mul) => {
+                if *b < 0 {
+                    return Err(PalladError::NegativeRepeat);
+                }
+                let count = *b as usize;
+                // Check for overflow before allocating
+                a.len()
+                    .checked_mul(count)
+                    .ok_or(PalladError::RepeatOverflow)?;
+                Value::Str(a.repeat(count))
+            },
 
-            (Value::Int(a), Value::Int(b), "Div") => Value::Float(a as f64 / b as f64),
-            (Value::Int(a), Value::Float(b), "Div") => Value::Float(a as f64 / b),
-            (Value::Float(a), Value::Int(b), "Div") => Value::Float(a / b as f64),
-            (Value::Float(a), Value::Float(b), "Div") => Value::Float(a / b),
+            // Invalid: Str / any, any / Str
+            (Value::Int(a), Value::Int(b), Op::Div) => Value::Float(*a as f64 / *b as f64),
+            (Value::Int(a), Value::Float(b), Op::Div) => Value::Float(*a as f64 / b),
+            (Value::Float(a), Value::Int(b), Op::Div) => Value::Float(a / *b as f64),
+            (Value::Float(a), Value::Float(b), Op::Div) => Value::Float(a / b),
 
-            (Value::Int(a), Value::Int(b), "IntDiv") => Value::Int(a / b),
-            (Value::Int(a), Value::Float(b), "IntDiv") => {
-                let result = (a as f64 / b).floor();
+            // Invalid: Str // any, any // Str
+            (Value::Int(a), Value::Int(b), Op::IntDiv) => {
+                a.checked_div(*b)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntDivOverflow)?
+            }
+            (Value::Int(a), Value::Float(b), Op::IntDiv) => {
+                let result = (*a as f64 / b).floor();
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                    return Err(PalladError::IntDivOverflow);
                 }
             }
-            (Value::Float(a), Value::Int(b), "IntDiv") => {
-                let result = (a / b as f64).floor();
+            (Value::Float(a), Value::Int(b), Op::IntDiv) => {
+                let result = (a / *b as f64).floor();
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                    return Err(PalladError::IntDivOverflow);
                 }
             }
-            (Value::Float(a), Value::Float(b), "IntDiv") => {
+            (Value::Float(a), Value::Float(b), Op::IntDiv) => {
                 let result = (a / b).floor();
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::TypeMismatch { operation: "IntDiv".to_string() });
+                    return Err(PalladError::IntDivOverflow);
                 }
             }
 
-            (Value::Int(a), Value::Int(b), "Mod") => Value::Int(a % b),
-            (Value::Int(a), Value::Float(b), "Mod") => Value::Float(a as f64 % b),
-            (Value::Float(a), Value::Int(b), "Mod") => Value::Float(a % b as f64),
-            (Value::Float(a), Value::Float(b), "Mod") => Value::Float(a % b),
+            // Invalid: Str % any, any % Str
+            (Value::Int(a), Value::Int(b), Op::Mod) => Value::Int(a % b),
+            (Value::Int(a), Value::Float(b), Op::Mod) => Value::Float(*a as f64 % b),
+            (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
+            (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
 
-            _ => return Err(PalladError::TypeMismatch { operation: op_name.to_string() }),
+            _ => return Err(PalladError::TypeMismatch {
+                left: a,
+                right: b,
+                operation: op.name()
+            }),
         })
     }
 }

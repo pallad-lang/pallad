@@ -4,4 +4,12 @@ var c = 5 % 2      # 1
 var d = -5         # -5
 var e = -a         # -2.5
 var f = -(b * 4)   # -8
-print(a, b, c, d, e, f)
+#print(a, b, c, d, e, f)
+
+var g = ""
+var h = "a"
+var i = " \""
+var j = "0\\1\n2\t3\n\r4"
+print(g, h, i, j)
+print("foo" + 'bar')
+print("foo" * b)
