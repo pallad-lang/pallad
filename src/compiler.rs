@@ -63,6 +63,7 @@ fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {
     match expr {
         Expr::Int(n) => program.push(Instr::LoadInt(n)),
         Expr::Float(f) => program.push(Instr::LoadFloat(f)),
+        Expr::Str(s) => program.push(Instr::LoadStr(s)),
         Expr::Var(name) => program.push(Instr::LoadVar(name)),
         Expr::Binary { left, op, right } => {
             compile_expr(*left, program);

@@ -2,6 +2,7 @@
 pub enum Instr {
     LoadInt(i64),
     LoadFloat(f64),
+    LoadStr(String),
     LoadVar(String),
     StoreVar(String),
     Add,

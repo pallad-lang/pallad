@@ -334,6 +334,7 @@ impl Parser {
             }
             Some(Token::Int(n)) => { self.advance(); Ok(Expr::Int(n)) }
             Some(Token::Float(f)) => { self.advance(); Ok(Expr::Float(f)) }
+            Some(Token::Str(s)) => { self.advance(); Ok(Expr::Str(s)) }
             Some(Token::Ident(name)) => { self.advance(); Ok(Expr::Var(name)) }
             Some(Token::LParen) => {
                 self.advance();

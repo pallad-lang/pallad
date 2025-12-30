@@ -1,3 +1,5 @@
+use crate::value::Value;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PalladError {
     UnexpectedToken { got: String, expected: String, line: usize },
@@ -5,10 +7,15 @@ pub enum PalladError {
     UnknownCharacter { got: String, line: usize },
     UnknownBuiltin { name: String },
     UndefinedVariable { name: String },
-    StackUnderflow { operation: String },
-    TypeMismatch { operation: String },
+    StackUnderflow { operation: &'static str },
+    TypeMismatch { left: Value, right: Value, operation: &'static str },
     InvalidNumber { value: String, line: usize },
-    DivisionByZero { operation: String },
+    DivisionByZero { operation: &'static str },
+    IntDivOverflow,
+    RepeatOverflow,
+    NegativeRepeat,
+    InvalidEscape { char: char, line: usize },
+    UnterminatedString { line: usize },
 }
 
 impl std::fmt::Display for PalladError {
@@ -44,10 +51,20 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Undefined variable: {}", name),
             PalladError::StackUnderflow { operation } =>
                 write!(f, "Stack underflow: {}", operation),
-            PalladError::TypeMismatch { operation } =>
-                write!(f, "Type mismatch: {}", operation),
+            PalladError::TypeMismatch { left, right, operation } =>
+                write!(f, "Cannot {} '{}' and '{}'", operation, left, right),
             PalladError::DivisionByZero { operation } =>
-                write!(f, "Division by zero at {} operation is not valid", operation)
+                write!(f, "Division by zero at {} operation is not valid", operation),
+            PalladError::IntDivOverflow =>
+                write!(f, "Integer division overflow"),
+            PalladError::RepeatOverflow =>
+                write!(f, "String repeat overflow"),
+            PalladError::NegativeRepeat =>
+                write!(f, "String repeat count can't be negative"),
+            PalladError::InvalidEscape { line, char } =>
+                write!(f, "Line {}: Invalid escaped character: {}", line, char),
+            PalladError::UnterminatedString { line } =>
+                write!(f, "Line {}: Unterminated string", line),
         }
     }
 }
