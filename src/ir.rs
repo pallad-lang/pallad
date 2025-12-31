@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Instr {
+    LoadNone,
     LoadInt(i64),
     LoadFloat(f64),
     LoadStr(String),

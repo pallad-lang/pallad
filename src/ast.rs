@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Expr {
+    None,
     Int(i64),
     Float(f64),
     Str(String),

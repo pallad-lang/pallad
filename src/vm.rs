@@ -77,6 +77,7 @@ impl VM {
     pub fn run(&mut self, program: Vec<Instr>) -> Result<(), PalladError> {
         for instr in program {
             match instr {
+                Instr::LoadNone => self.stack.push(Value::None),
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
                 Instr::LoadFloat(f) => self.stack.push(Value::Float(f)),
                 Instr::LoadStr(s) => self.stack.push(Value::Str(s)),
@@ -118,6 +119,7 @@ impl VM {
                         }
                         for arg in args.into_iter().rev() {
                             match arg {
+                                Value::None => println!("<none>"),
                                 Value::Int(n) => println!("{}", n),
                                 Value::Float(f) => println!("{}", f),
                                 Value::Str(s) => println!("{}", s),
@@ -201,7 +203,7 @@ impl VM {
             let is_zero = match &b {
                 Value::Int(n) => *n == 0,
                 Value::Float(f) => *f == 0.0,
-                Value::Str(_s) => false,
+                _ => false, // Others raise PalladError::TypeMismatch
             };
             if is_zero {
                 return Err(PalladError::DivisionByZero { operation: op.name() });
@@ -209,27 +211,42 @@ impl VM {
         }
 
         Ok(match (&a, &b, &op) {
+            // 'none' is invalid in all operations.
+            // Other invalid operations:
+            // string - any         any - string        int * string        float * string
+            // string * float       string / any        any / string        string // any
+            // any // string       string % any        any % string
+            
+            // add (+)
+            // int
             (Value::Int(a), Value::Int(b), Op::Add) => Value::Int(a + b),
             (Value::Int(a), Value::Float(b), Op::Add) => Value::Float(*a as f64 + b),
             (Value::Int(a), Value::Str(b), Op::Add) => Value::Str(a.to_string() + b),
+            // float
             (Value::Float(a), Value::Int(b), Op::Add) => Value::Float(a + *b as f64),
             (Value::Float(a), Value::Float(b), Op::Add) => Value::Float(a + b),
             (Value::Float(a), Value::Str(b), Op::Add) => Value::Str(a.to_string() + b),
+            // string
             (Value::Str(a), Value::Int(b), Op::Add) => Value::Str(a.clone() + &b.to_string()),
             (Value::Str(a), Value::Float(b), Op::Add) => Value::Str(a.clone() + &b.to_string()),
             (Value::Str(a), Value::Str(b), Op::Add) => Value::Str(a.clone() + b),
 
-            // Invalid: Str - any, any - Str
+            // subtract (-)
+            // int
             (Value::Int(a), Value::Int(b), Op::Sub) => Value::Int(a - b),
             (Value::Int(a), Value::Float(b), Op::Sub) => Value::Float(*a as f64 - b),
+            // float
             (Value::Float(a), Value::Int(b), Op::Sub) => Value::Float(a - *b as f64),
             (Value::Float(a), Value::Float(b), Op::Sub) => Value::Float(a - b),
 
-            // Invalid: any * Str, Str * Float, Str * Str
+            // multiply (*)
+            // int
             (Value::Int(a), Value::Int(b), Op::Mul) => Value::Int(a * b),
             (Value::Int(a), Value::Float(b), Op::Mul) => Value::Float(*a as f64 * b),
+            // float
             (Value::Float(a), Value::Int(b), Op::Mul) => Value::Float(a * *b as f64),
             (Value::Float(a), Value::Float(b), Op::Mul) => Value::Float(a * b),
+            // string
             (Value::Str(a), Value::Int(b), Op::Mul) => {
                 if *b < 0 {
                     return Err(PalladError::NegativeRepeat);
@@ -242,13 +259,16 @@ impl VM {
                 Value::Str(a.repeat(count))
             },
 
-            // Invalid: Str / any, any / Str
+            // divide (/)
+            // int
             (Value::Int(a), Value::Int(b), Op::Div) => Value::Float(*a as f64 / *b as f64),
             (Value::Int(a), Value::Float(b), Op::Div) => Value::Float(*a as f64 / b),
+            // float
             (Value::Float(a), Value::Int(b), Op::Div) => Value::Float(a / *b as f64),
             (Value::Float(a), Value::Float(b), Op::Div) => Value::Float(a / b),
 
-            // Invalid: Str // any, any // Str
+            // integer-divide (//)
+            // int
             (Value::Int(a), Value::Int(b), Op::IntDiv) => {
                 a.checked_div(*b)
                     .map(Value::Int)
@@ -262,6 +282,7 @@ impl VM {
                     return Err(PalladError::IntDivOverflow);
                 }
             }
+            // float
             (Value::Float(a), Value::Int(b), Op::IntDiv) => {
                 let result = (a / *b as f64).floor();
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
@@ -279,9 +300,11 @@ impl VM {
                 }
             }
 
-            // Invalid: Str % any, any % Str
+            // mod (%)
+            // int
             (Value::Int(a), Value::Int(b), Op::Mod) => Value::Int(a % b),
             (Value::Int(a), Value::Float(b), Op::Mod) => Value::Float(*a as f64 % b),
+            // float
             (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
             (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
 

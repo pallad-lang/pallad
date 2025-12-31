@@ -102,6 +102,7 @@ This is a list of currently implemented features.
 - Keywords:
   - `var`
 - Types:
+  - `none`
   - `int`
   - `float`
   - `string`
@@ -117,7 +118,6 @@ This is a list of currently implemented features.
 
 ### Known Issues
 This is a list of known missing points about implemented features listed above:
-- `parser.rs:55-70`: `var` keyword without initial value raises parse error `Expected '=', got Eol`.
 - `parser.rs:185-190`: Changing value of a variable needs `var` keyword, otherwise raises parse error `Expected 'var', 'print', or end of line, got Ident(...)`
 - `parser.rs:324-360`: Multi-line expressions raises parse error `Expected integer, float, variable, or '(', got Eol`.
 - `vm.rs:103-128`: Integer operations can overflow, values wrap silently.

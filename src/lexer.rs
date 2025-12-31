@@ -3,6 +3,7 @@ use crate::error::PalladError;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Var,          // 'var'
+    None,         // 'none'
     Print,        // 'print'
     Ident(String),// variable names
     Int(i64),     // int numbers
@@ -24,10 +25,9 @@ pub enum Token {
 /// Convert source text into a sequence of lexical tokens for the language.
 ///
 /// Processes the input line-by-line, stripping `#` comments and emitting tokens for
-/// identifiers, reserved keywords (`var`, `print`), integer and floating numeric literals,
-/// string literals (with escape sequences: \n, \t, \r, \", \\, \'),
-/// operators (`+`, `-`, `*`, `/`, `//`, `%`, `=`), parentheses, commas, and an end-of-line
-/// `Eol` token after each non-empty line.
+/// identifiers, reserved keywords, integer and floating numeric literals, string literals
+/// (with escape sequences: \n, \t, \r, \", \\, \'), operators (`+`, `-`, `*`, `/`, `//`, 
+/// `%`, `=`), parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
 ///
 /// # Returns
 ///
@@ -101,6 +101,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                     }
                     match ident.as_str() {
                         "var" => tokens.push(Token::Var),
+                        "none" => tokens.push(Token::None),
                         "print" => tokens.push(Token::Print),
                         _ => tokens.push(Token::Ident(ident)),
                     }
