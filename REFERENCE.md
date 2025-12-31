@@ -47,33 +47,35 @@ Pallad is dynamically typed, meaning types are determined at runtime rather than
 > Pallad compiles to bytecode and is then interpreted in Rust. “Compile time” refers to the bytecode generation phase.
 
 Currently implemented types:
+- **`none`**: Empty value
 - **`float`**: Floating-point numbers  
 - **`int`**: Integer numbers  
 - **`string`**: Text enclosed in `""` or `''`
 
 > **Important**  
 > Most Pallad types are not yet implemented. The following list represents planned types (subject to change):
-
-| Type                    | Keyword   | Type       | Keyword   |
-|--------------------------|-----------|------------|-----------|
-| Variant                 | `variant` | Void       | `void`    |
-| Boolean                 | `bool`    | Integer    | `int`     |
-| Byte                    | `byte`    | Char       | `char`    |
-| State                   | `state`   | Float      | `float`   |
-| Complex                 | `complex` | Array      | `array`   |
-| Multi-dimensional Array | `mdarray` | Table      | `table`   |
-| Queue                   | `queue`   | Buffer     | `buffer`  |
-| Set                     | `set`     | Tuple      | `tuple`   |
-| Pair                    | `pair`    | Triplet    | `triplet` |
-| Dictionary              | `dict`    | String     | `string`  |
-| Callable                | `function`| Color      | `color`   |
+> 
+> | Type                    | Keyword   | Type       | Keyword   |
+> |-------------------------|-----------|------------|-----------|
+> | Variant                 | `variant` | Void       | `void`    |
+> | Boolean                 | `bool`    | Integer    | `int`     |
+> | Byte                    | `byte`    | Char       | `char`    |
+> | State                   | `state`   | Float      | `float`   |
+> | Complex                 | `complex` | Array      | `array`   |
+> | Multi-dimensional Array | `mdarray` | Table      | `table`   |
+> | Queue                   | `queue`   | Buffer     | `buffer`  |
+> | Set                     | `set`     | Tuple      | `tuple`   |
+> | Pair                    | `pair`    | Triplet    | `triplet` |
+> | Dictionary              | `dict`    | String     | `string`  |
+> | Callable                | `function`| Color      | `color`   |
+> | None                    | `none`    |            |           |
 
 ### Truthiness
 In boolean contexts (such as `if` or `while` conditions), non-boolean values are converted to boolean according to the following rules:
 
 | Type     | Evaluates to `false` |
 |----------|-----------------------|
-| `null`   | `null` (always false) |
+| `none`   | `none` (always false) |
 | `bool`   | `false`               |
 | `int`    | `0`                   |
 | `float`  | `0.0`                 |
@@ -82,13 +84,13 @@ In boolean contexts (such as `if` or `while` conditions), non-boolean values are
 All other values are considered `true`.
 
 > **Note**  
-> `null` and `bool` types are not yet implemented. This section describes planned behavior.
+> `bool` type is not yet implemented. This section describes planned behavior.
 
 ---
 
 This file is incomplete due to unimplemented features. Future updates will include:
 
-- Detailed type descriptions (`null`, `bool`, `int`, `float`, `string`, etc.)  
+- Detailed type descriptions (`none`, `bool`, `int`, `float`, `string`, etc.)  
 - Static typing and runtime type checking  
 - Type conversions  
 - Grammar and expression rules (arithmetic, boolean, assignment, grouping)  

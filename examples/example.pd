@@ -1,15 +1,20 @@
-var a = 5 / 2      # 2.5 (float)
-var b = 5 // 2     # 2 (integer)
-var c = 5 % 2      # 1
-var d = -5         # -5
-var e = -a         # -2.5
-var f = -(b * 4)   # -8
-#print(a, b, c, d, e, f)
+# Uncomment prints to see results.
 
-var g = ""
-var h = "a"
-var i = " \""
-var j = "0\\1\n2\t3\n\r4"
-print(g, h, i, j)
-print("foo" + 'bar')
-print("foo" * b)
+var a = 5 / 2                               # 2.5 (float)
+var b = 5 // 2                              # 2 (integer)
+var c = 5 % 2                               # 1
+var d = -5                                  # -5
+var e = -a                                  # -2.5
+var f = -(b * 4)                            # -8
+#print(a, b, c, d, e, f)                    # All above variables
+
+var g = ""                                  # Empty string
+var h = "a"                                 # a
+var i = " \""                               # " character
+var j = "0\\1\n2\t3\r\n4"                   # 0\1<LF>2<TAB>3<CRLF>4
+#print(g, h, i, j)                          # All above variables
+#print("foo" + 'bar')                       # foobar
+#print("foo" * b)                           # foofoo (b is 2)
+
+var k                                       # none
+#print(k)                                   # Above variable

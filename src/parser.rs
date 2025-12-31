@@ -111,24 +111,26 @@ impl Parser {
                         }
                     };
 
-                    match self.current() {
-                        Some(Token::Eq) => self.advance(),
+                    let expr = match self.current() {
+                        Some(Token::Eq) => {
+                            self.advance();
+                            self.parse_expr()?
+                        }
+                        Some(Token::Eol) => { Expr::None }
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other),
-                                expected: "'='".to_string(),
+                                expected: "'=' or end of line".to_string(),
                                 line: self.line,
                             });
                         }
                         None => {
                             return Err(PalladError::EndOfInput {
-                                expected: "'='".to_string(),
+                                expected: "'=' or end of line".to_string(),
                                 line: self.line,
                             });
                         }
-                    }
-
-                    let expr = self.parse_expr()?;
+                    };
                     stmts.push(Stmt::Let { name: var_name, expr });
                 }
 
@@ -332,6 +334,7 @@ impl Parser {
                     right: Box::new(operand),
                 })
             }
+            Some(Token::None) => { self.advance(); Ok(Expr::None) }
             Some(Token::Int(n)) => { self.advance(); Ok(Expr::Int(n)) }
             Some(Token::Float(f)) => { self.advance(); Ok(Expr::Float(f)) }
             Some(Token::Str(s)) => { self.advance(); Ok(Expr::Str(s)) }
@@ -354,11 +357,11 @@ impl Parser {
             }
             Some(tok) => Err(PalladError::UnexpectedToken {
                 got: format!("{:?}", tok),
-                expected: "integer, float, variable, or '('".to_string(),
+                expected: "value, variable, or '('".to_string(),
                 line: self.line,
             }),
             None => Err(PalladError::EndOfInput {
-                expected: "integer, float, variable, or '('".to_string(),
+                expected: "value, variable, or '('".to_string(),
                 line: self.line,
             }),
         }
