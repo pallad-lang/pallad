@@ -1,0 +1,8 @@
+var a = ""                                  # Empty string
+var b = "a"                                 # a
+var c = "\""                                # " character
+var d = "0\\1\n2\t3\r\n4"                   # 0\1<LF>2<TAB>3<CRLF>4
+
+print(a, b, c, d)                          # All above variables
+print("foo" + "bar")                       # foobar
+print("foo" * 4)                           # foofoofoofoo

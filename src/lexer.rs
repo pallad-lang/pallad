@@ -26,8 +26,8 @@ pub enum Token {
 ///
 /// Processes the input line-by-line, stripping `#` comments and emitting tokens for
 /// identifiers, reserved keywords, integer and floating numeric literals, string literals
-/// (with escape sequences: \n, \t, \r, \", \\, \'), operators (`+`, `-`, `*`, `/`, `//`, 
-/// `%`, `=`), parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
+/// (with escape sequences: \n, \t, \r, \", \\), operators (`+`, `-`, `*`, `/`, `//`, `%`,
+/// `=`), parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
 ///
 /// # Returns
 ///
@@ -108,12 +108,43 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 }
                 '"' => {
                     chars.next(); // consume opening "
-                    let s = parse_string(&mut chars, '"', line_no)?;
-                    tokens.push(Token::Str(s));
-                }
-                '\'' => {
-                    chars.next(); // consume opening '
-                    let s = parse_string(&mut chars, '\'', line_no)?;
+
+                    let mut s = String::new();
+                    let mut closed = false;
+
+                    while let Some(c) = chars.next() {
+                        match c {
+                            '\\' => {
+                                let escaped = match chars.next() {
+                                    Some('n') => '\n',
+                                    Some('t') => '\t',
+                                    Some('r') => '\r',
+                                    Some('"') => '"',
+                                    Some('\\') => '\\',
+                                    Some(other) => {
+                                        return Err(PalladError::InvalidEscape {
+                                            char: other,
+                                            line: line_no + 1,
+                                        });
+                                    }
+                                    None => {
+                                        return Err(PalladError::UnterminatedString { line: line_no + 1 });
+                                    }
+                                };
+                                s.push(escaped);
+                            }
+                            '"' => {
+                                closed = true;
+                                break;
+                            }
+                            other => s.push(other),
+                        }
+                    }
+
+                    if !closed {
+                        return Err(PalladError::UnterminatedString { line: line_no + 1 });
+                    }
+
                     tokens.push(Token::Str(s));
                 }
                 '/' => {
@@ -145,48 +176,4 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     } 
 
     Ok(tokens)
-}
-
-fn parse_string(
-    chars: &mut std::iter::Peekable<std::str::Chars>,
-    quote: char,
-    line_no: usize,
-) -> Result<String, PalladError> {
-    let mut s = String::new();
-    let mut closed = false;
-
-    while let Some(c) = chars.next() {
-        match c {
-            '\\' => {
-                let escaped = match chars.next() {
-                    Some('n') => '\n',
-                    Some('t') => '\t',
-                    Some('r') => '\r',
-                    Some(q) if q == quote => q,
-                    Some('\\') => '\\',
-                    Some(other) => {
-                        return Err(PalladError::InvalidEscape {
-                            char: other,
-                            line: line_no + 1,
-                        });
-                    }
-                    None => {
-                        return Err(PalladError::UnterminatedString { line: line_no + 1 });
-                    }
-                };
-                s.push(escaped);
-            }
-            c if c == quote => {
-                closed = true;
-                break;
-            }
-            other => s.push(other),
-        }
-    }
-
-    if !closed {
-        return Err(PalladError::UnterminatedString { line: line_no + 1 });
-    }
-
-    Ok(s)
 }

@@ -12,12 +12,11 @@ Pallad supports single-line comments with `#` character, inline comments can be 
 var name = "Ali" # Inline comment
 ```
 
-You can use separate string literals as comment:
+You can use separate multi-line strings as comment:
 
 ```pallad
-"String literals are comments too."
-
 """
+String literals are comments too.
 So you can use multi-line strings
 as multi-line comment.
 """
@@ -107,52 +106,53 @@ Also supports optional setter and getters:
 
 ```pallad
 var activation_state: state[3] = none:
-	setter(new_state: state[3]) -> void:
-		if new_state == true:
-			print("Activated")
-		elif new_state == false:
-			print("Activation Failed!")
-		else:
-			print("Reset activation state...")
-		activation_state = new_state
-	getter() -> string: # Can get parameters!
-		if activation_state == true:
-			return "Completed"
-		elif activation_state == false:
-			return "Failed"
-		else:
-			return "Not Started"
+    setter(new_state: state[3]) -> void:
+        if new_state == true:
+            print("Activated")
+        elif new_state == false:
+            print("Activation Failed!")
+        else:
+            print("Reset activation state...")
+        activation_state = new_state
+    getter() -> string: # Can get parameters!
+        if activation_state == true:
+            return "Completed"
+        elif activation_state == false:
+            return "Failed"
+        else:
+            return "Not Started"
 ```
 
 ## Types
 Each type is a class.
 
 ### Overview
-| Type                    |  In Code   | | Type    |  In Code  |
-|:------------------------|:----------:|-|:--------|:---------:|
-| Variant                 | `variant`  | | Void    |  `void`   |
-| Boolean                 |   `bool`   | | Integer |   `int`   |
-| Byte                    |   `byte`   | | Char    |  `char`   |
-| State                   |  `state`   | | Float   |  `float`  |
-| Complex                 | `complex`  | | Array   |  `array`  |
-| Multi-dimensional Array | `mdarray`  | | Table   |  `table`  |
-| Queue                   |  `queue`   | | Buffer  | `buffer`  |
-| Set                     |   `set`    | | Tuple   |  `tuple`  |
-| Pair                    |   `pair`   | | Triplet | `triplet` |
-| Dictionary              |   `dict`   | | String  | `string`  |
-| Callable                | `function` | | Color   |  `color`  |
+
+| Type                    |  In Code   | | Type        |     In Code     |
+|:------------------------|:----------:|-|:------------|:---------------:|
+| Variant                 | `variant`  | | Void / None | `void` / `none` |
+| Boolean                 |   `bool`   | | Integer     |      `int`      |
+| Byte                    |   `byte`   | | Char        |     `char`      |
+| State                   |  `state`   | | Float       |     `float`     |
+| Complex                 | `complex`  | | Array       |     `array`     |
+| Multi-dimensional Array | `mdarray`  | | Table       |     `table`     |
+| Queue                   |  `queue`   | | Buffer      |    `buffer`     |
+| Set                     |   `set`    | | Tuple       |     `tuple`     |
+| Pair                    |   `pair`   | | Triplet     |    `triplet`    |
+| Dictionary              |   `dict`   | | String      |    `string`     |
+| Callable                | `function` | | Color       |     `color`     |
 
 ### Variant
 Accepts any type.
 
+### Void
+Just for return type of functions without any return.
+
 ### None
 Represents the absence of a value.
 - Default value for uninitialized variables and constants.
-- Can be assigned to any variable regardless of type.
-- Used in conditions as a third state (besides true and false).
-
-### Void
-Just for return type of functions without any return.
+- `none` can be assigned to any variable regardless of type.
+- Used in conditions as a third state (besides `true` and `false`).
 
 ### Boolean
 Uses `true` and `false` as booleans. `and`, `or`, and `not` operators are available.
@@ -166,8 +166,8 @@ var year := 2025
 ### Byte
 One byte (8 bits).
 ```pallad
-var eleven: byte = 00001011
-var fifteen := byte("00001111")
+var eleven := 0b00001011
+var fifteen: byte = 0x0F
 ```
 
 ### Char
@@ -192,7 +192,7 @@ var temperature := 26.5
 Complex number with real and imaginary parts.
 ```pallad
 # Both will be equal
-var complex_number := Complex(3, 4)
+var complex_number := complex(3, 4)
 var valid_complex := 3+4i
 ```
 
@@ -214,26 +214,27 @@ var steped_r := range(1, 7, 2) # 1, 3, 5
 Recurse arrays to keep data in more than one axis.
 ```pallad
 var cube: mdarray[2, float] = [
-	[
-		[1.3,2,5],
-		[-6,0.1,7.5],
-	], [
-		[5,-2.0,0.34],
-		[0,0,14]
-	], [
-		[6,1.0,-100],
-		[0.5,0.5,0.5],
-	],
+    [
+        [1.3,2,5],
+        [-6,0.1,7.5],
+    ], [
+        [5,-2.0,0.34],
+        [0,0,14]
+    ], [
+        [6,1.0,-100],
+        [0.5,0.5,0.5],
+    ],
 ]
 ```
 
 ### Table
 2-dimensional array with optional header and typed columns.
 ```pallad
+@header
 var data: table[4, string, int, string, string] = [
-	["UserID", "Age", "Username", "Password"],
-	["U_54xC", 21, "Max", "M2002X"],
-	["U_3z62", 23, "Joe", "LaT3X!01"],
+    ["UserID", "Age", "Username", "Password"],
+    ["U_54xC", 21, "Max", "M2002X"],
+    ["U_3z62", 23, "Joe", "LaT3X!01"],
 ]
 ```
 
@@ -242,7 +243,7 @@ Special array to manage queues.
 ```pallad
 # Add at the end
 # Remove from the first
-var tasks: queue[string] = Queue() # For create empty queue
+var tasks: queue[string] = queue() # Creates empty queue
 tasks.enqueue("Task 1") # ["Task 1"]
 tasks.enqueue("Task 2") # ["Task 1", "Task 2"]
 print(tasks.dequeue()) # prints "Task 1", tasks will be: ["Task 2"]
@@ -251,10 +252,7 @@ print(tasks.dequeue()) # prints "Task 1", tasks will be: ["Task 2"]
 ### Buffer
 Array of bytes.
 ```pallad
-var file: buffer = [
-    01001001, 10001101, 00000000,
-    11100100, 00010011, 00000001,
-]
+var file := buffer(128)
 var message := buffer("Hello World!", buffer.ENCODE_UTF_8)
 ```
 
@@ -319,10 +317,10 @@ func _on_data_received(data: string) -> void:
 `...` can be used to pass any count of parameters:
 ```pallad
 func sum(...nums: array[int]) -> int:
-	var sum: int = 0
-	for i in nums:
-		sum += i
-	return sum
+    var sum: int = 0
+    for i in nums:
+        sum += i
+    return sum
 ```
 
 `call()` function can be used to call functions, all functions are available as callable in current scope:
@@ -366,10 +364,10 @@ print(OK) # 0
 print(Error.OK) # 0
 
 enum States:
-	DAY, # 0
-	NIGHT = 6,
-	MIDNIGHT = 11,
-	MORNING, # 12 (from last)
+    DAY, # 0
+    NIGHT = 6,
+    MIDNIGHT = 11,
+    MORNING, # 12 (from last)
 
 print(States.DAY) # 0
 print(DAY) # Error, doesn't exist!
@@ -390,60 +388,60 @@ else:
     pass
 ```
 
-You can use `switch`, just one branch will be executed:
+You can use `match`, just one branch will be executed:
 ```pallad
 enum TimeState:
-	MORNING,
-	DAY,
-	NIGHT,
-	MIDNIGHT,
+    MORNING,
+    DAY,
+    NIGHT,
+    MIDNIGHT,
 
-switch time:
-	case TimeState.DAY:
-		pass
-	case TimeState.NIGHT, TimeState.MORNING:
-		pass
-	default:
-		pass
+match time:
+    TimeState.DAY:
+        pass
+    TimeState.NIGHT, TimeState.MORNING:
+        pass
+    _:
+        pass
 ```
 
 ## Loops
 `for`, `while`, and `do ... while` are available:
 ```pallad
 for i in range(1, 10):
-	if i % 2:
-		continue
-	if i == 9:
-		break
-	print(i)
+    if i % 2:
+        continue
+    if i == 9:
+        break
+    print(i)
 
 while condition:
-	pass
+    pass
 
 do:
-	pass
+    pass
 while condition
 
 for i in range(1, 10):
-	for j in range(1, 10) as inner_status: # as inner_status is optional advanced loop monitoring
-		if i == j:
-			break(2) # breaks two loops
-		if i == 9 and j == 9:
-			continue(2) # skips this iteration and next one
-		if i == 10:
-			continue(loops=2) # skips this iteration and current iteration in outer loop
-	match inner_status.status:
-		case LOOP_STATUS_COMPLETE:
-			print("Inner loop was passed completely.")
-		case LOOP_STATUS_FULL_SKIP:
-			print("Inner loop wasn't executed any time.")
-		case LOOP_STATUS_HAS_SKIP:
-			print(f"Inner loop was skipped for {inner_status.skip_count} times.")
-		case LOOP_STATUS_BREAK:
-			print(f"Inner loop was broke at {inner_status.break_iteration} iteration.")
-	print(f"Inner loop executed: {inner_status.iter_executed} of {inner_status.iter_count} ({inner_status.iter_completely_executed} iterations were completed)")
+    for j in range(1, 10) as inner_status: # as inner_status is optional advanced loop monitoring
+        if i == j:
+            break(2) # breaks two loops
+        if i == 9 and j == 9:
+            continue(2) # skips this iteration and next one
+        if i == 10:
+            continue(loops=2) # skips this iteration and current iteration in outer loop
+    match inner_status.status:
+        LOOP_STATUS_COMPLETE:
+            print("Inner loop was passed completely.")
+        LOOP_STATUS_FULL_SKIP:
+            print("Inner loop wasn't executed any time.")
+        LOOP_STATUS_HAS_SKIP:
+            print(f"Inner loop was skipped for {inner_status.skip_count} times.")
+        LOOP_STATUS_BREAK:
+            print(f"Inner loop was broke at {inner_status.break_iteration} iteration.")
+    print(f"Inner loop executed: {inner_status.iter_executed} of {inner_status.iter_count} ({inner_status.iter_completely_executed} iterations were completed)")
 else:
-    print("Nothing) # when loop number is 0 (e.g. for i in []), same as LOOP_STATUS_FULL_SKIP
+    print("Nothing") # when loop number is 0 (e.g. for i in []), same as LOOP_STATUS_FULL_SKIP
 ```
 
 ## Operators
@@ -452,61 +450,59 @@ var x: int = 10
 var y: float = 0.5
 var z: int = 8
 
-x + y # 10.5
-x - y # 9.5
-x * y # 5
-x / z # 1.25
-x // z # 1
-x % z # 2
-x ** z # 10^8
+x + y                    # 10.5
+x - y                    # 9.5
+x * y                    # 5
+x / z                    # 1.25
+x // z                   # 1
+x % z                    # 2
+x ** z                   # 10^8
 
-x == z # false
-y != z # true
-x > y # true
-x >= y # true
-x < y # false
-x <= y # false
+x == z                   # false
+y != z                   # true
+x > y                    # true
+x >= y                   # true
+x < y                    # false
+x <= y                   # false
 
 x = 11
-x++ # x = 12
-x-- # x = 11
-x += 1 # x = 12
-x -= 2 # x = 10
-x *= 0.1 # x = 1
-x /= 2 # Invalid, x / 2 is valid but cann't be assigned to x from type int!
-y = float(x) # y = 1.0
-y /= 2 # = y = 0.5
+x += 1                   # x = 12
+x -= 2                   # x = 10
+x *= 0.1                 # x = 1
+x /= 2                   # Invalid, x / 2 is valid but cann't be assigned to x from type int!
+y = float(x)             # y = 1.0
+y /= 2                   # y = 0.5
 
-false and true # false
-true or false # true
-not false # true
+false and true           # false
+true or false            # true
+not false                # true
 
-5 & 3 # 1
-5 | 3 # 7
-5 ^ 3 # 6
-~5 # -6
-5 << 1 # 10
-5 >> 1 # 2
+5 & 3                    # 1
+5 | 3                    # 7
+5 ^ 3                    # 6
+~5                       # -6
+5 << 1                   # 10
+5 >> 1                   # 2
 
-4 in [1,4,2,6,8,2,4] # true
--10 not in [-10, 0, 10] # false
+4 in [1,4,2,6,8,2,4]     # true
+-10 not in [-10, 0, 10]  # false
 ```
 
 ## Exceptions
 ```pallad
 try:
-	var x: int = 10 / 0
-# When error is a RuntimeError, just this block will be executed, not next one:
+    var x: int = 10 / 0
+# At errors, just one "except" branch will be executed.
 except RuntimeError as error:
-	print("Runtime error: ", error)
+    print("Runtime error: ", error)
 except ValueError, TypeError: # Without passing error object
-	print("Value or type error.")
+    print("Value or type error.")
 except Error as error:
-	print("Generic error: ", error)
+    print("Generic error: ", error)
 else:
-	print(f"X: {x}") # At success
-finally:
-	print("Cleanup...") # Even at unexpected error
+    print(f"X: {x}") # At success
+ensure:
+    print("Cleanup...") # Even at unexpected error
 
 raise "Custom Error!"
 
@@ -516,9 +512,9 @@ assert(x > 0, "X should be positive!")
 ## Logging
 Supports internal logging:
 ```pallad
-log.add("Test")
-log.error(f"Error: {e}")
-log.message("Red!", Color.RED)
+Logger.info("Test")
+Logger.warn("Are you sure?")
+Logger.error(f"Error: {e}")
 ```
 
 ## Input
@@ -530,29 +526,28 @@ var name: string = input("Enter your name: ")
 ```pallad
 print("This is message!")
 print(f"Hello, {name}!")
-print(""
+print("""
 Line 1
 Line 2
 Line 3
-"")
+""")
 ```
 
 ## Files
 ```pallad
 try:
-	# "with" provides auto-close:
-	with open("data.txt", "r") as file:
-		print(file.read())
-		for line in file.lines:
-			print(f"Line: {line}")
+    # "with" provides auto-close:
+    with open("data.txt", "r") as file:
+        for line in file.lines:
+            print(f"Line: {line}")
 except Error:
-	print("Error!")
+    print("Error!")
 
 with open("data.txt", "w") as file:
-	file.write("Some text.")
+    file.write("Some text.")
 
-with open("data.txt", "a") as file
-	file.write("This is new line.\n")
+with open("data.txt", "a") as file:
+    file.write("This is new line.\n")
 ```
 
 ## OOP
@@ -577,8 +572,8 @@ import *
 var persons: Array[Person]
 
 for i in range(2):
-	var p := Person()
-	persons.append(p)
+    var p := Person()
+    persons.append(p)
 ```
 
 ### Static properties
@@ -595,31 +590,31 @@ var age: int
 
 print("First static")
 
-# This syntax improves readability but is optional: place defenitions in class body and behavior in "static:" block
+# This syntax improves readability but is optional: place definitions in class body and behavior in "static:" block
 static:
-	count = 0
-	print("Second static")
+    count = 0
+    print("Second static")
 
 # Static behavior will be excuted in writing order
 print("Last static")
 
 static constructor -> bool:
-	if game == none:
-		print("Failed to initialize constructors!")
-		return false
-	print("Constructors initialized")
-	return true
+    if game == none:
+        print("Failed to initialize constructors!")
+        return false
+    print("Constructors initialized")
+    return true
 
 constructor(name: string, age: int):
-	self.name = name
-	self.age = age
-	print("Instance created")
+    self.name = name
+    self.age = age
+    print("Instance created")
 
 static func get_game() -> Game:
-	return game
+    return game
 
 static func has_game() -> bool:
-	return game != none
+    return game != none
 ```
 
 ```pallad
@@ -674,28 +669,28 @@ from os import process, path
 
 # config.pd exsists in current folder.
 if config.enable_debugger:
-	from "../debugger/"  import * # Imports every module in "debugger" folder in upper directory, last "/" is required
+    from "../debugger/"  import * # Imports every module in "debugger" folder in upper directory, last "/" is required
 else:
-	import "../debugger/light_debbuger" # Just imports "light_debugger.pd" module.
+    import "../debugger/light_debugger" # Just imports "light_debugger.pd" module.
 ```
 
 ### Inner classes
 ```pallad
 class Utils
 
-# Inner-class decleration will be moved to top, so this line is valid:
+# Inner-class declaration will be moved to top, so this line is valid:
 var counter := Counter()
 counter.add()
 print(counter.get())
 
 class Counter:
-	var count := 0
+    var count := 0
 
-	func add() -> void:
-		count += 1
-	
-	func get() -> int:
-		return count
+    func add() -> void:
+        count += 1
+    
+    func get() -> int:
+        return count
 ```
 
 Should be used like this in other modules:
@@ -716,20 +711,20 @@ var name: string
 var age: int
 
 constructor(): # Simple constructor
-	self.name = "Unknown"
-	self.age = 0
+    self.name = "Unknown"
+    self.age = 0
 
 constructor(name: string): # Constructor with parameter
-	self.name = name
-	self.age = 0
+    self.name = name
+    self.age = 0
 
 constructor(name: string, age: int): # Overloading
-	self.name = name
-	self.age = age
+    self.name = name
+    self.age = age
 
 constructor(copy: User): # Copy constructor
-	self.name = copy.name
-	self.age = copy.age
+    self.name = copy.name
+    self.age = copy.age
 ```
 
 ## Style Guide
