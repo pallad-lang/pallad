@@ -65,8 +65,8 @@ This project is currently in its first development stage.
 
 - Single-line comments with `#`
 - Variable declaration
-- `none`, `int`, `float`, `string` types
-- `+`, `-`, `*`, `/`, `//`, `%` operators
+- `none`, `bool`, `int`, `float`, `string` types
+- `+`, `-`, `*`, `/`, `//`, `%`, `and`, `or`, `not` operators
 - Built-in functions: `print`
 
 You can see a complete list of features with implementation status in [features document](spec/features.md). Use GitHub issue tracker to see more information for each item.

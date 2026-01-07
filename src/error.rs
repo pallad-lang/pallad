@@ -9,6 +9,7 @@ pub enum PalladError {
     UndefinedVariable { name: String },
     StackUnderflow { operation: &'static str },
     TypeMismatch { left: Value, right: Value, operation: &'static str },
+    UnaryTypeMismatch { value: Value, operation: &'static str},
     InvalidNumber { value: String, line: usize },
     DivisionByZero { operation: &'static str },
     IntDivOverflow,
@@ -16,6 +17,7 @@ pub enum PalladError {
     NegativeRepeat,
     InvalidEscape { char: char, line: usize },
     UnterminatedString { line: usize },
+    NegationOverflow,
 }
 
 impl std::fmt::Display for PalladError {
@@ -53,6 +55,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Stack underflow: {}", operation),
             PalladError::TypeMismatch { left, right, operation } =>
                 write!(f, "Cannot {} '{}' and '{}'", operation, left, right),
+            PalladError::UnaryTypeMismatch { value, operation } =>
+                write!(f, "Cannot {} '{}'", operation, value),
             PalladError::DivisionByZero { operation } =>
                 write!(f, "Division by zero at {} operation is not valid", operation),
             PalladError::IntDivOverflow =>
@@ -65,6 +69,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Line {}: Invalid escaped character: {}", line, char),
             PalladError::UnterminatedString { line } =>
                 write!(f, "Line {}: Unterminated string", line),
+            PalladError::NegationOverflow =>
+                write!(f, "Integer overflow on negation of 'int'"),
         }
     }
 }

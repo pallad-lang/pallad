@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub enum Expr {
     None,
+    Bool(bool),
     Int(i64),
     Float(f64),
     Str(String),
@@ -9,6 +10,10 @@ pub enum Expr {
         left: Box<Expr>,
         op: BinOp,
         right: Box<Expr>,
+    },
+    Unary {
+        op: UnOp,
+        expr: Box<Expr>,
     },
     Call {
         name: String,
@@ -30,4 +35,12 @@ pub enum BinOp {
     Div,
     IntDiv,
     Mod,
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone)]
+pub enum UnOp {
+    Neg,
+    Not,
 }

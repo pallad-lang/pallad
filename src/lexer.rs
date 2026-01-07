@@ -6,6 +6,7 @@ pub enum Token {
     None,         // 'none'
     Print,        // 'print'
     Ident(String),// variable names
+    Bool(bool),   // 'true' or 'false'
     Int(i64),     // int numbers
     Float(f64),   // float numbers
     Str(String),  // strings
@@ -19,6 +20,9 @@ pub enum Token {
     LParen,       // '('
     RParen,       // ')'
     Comma,        // ','
+    And,          // 'and'
+    Or,           // 'or'
+    Not,          // 'not'
     Eol,          // end of line
 }
 
@@ -103,6 +107,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         "var" => tokens.push(Token::Var),
                         "none" => tokens.push(Token::None),
                         "print" => tokens.push(Token::Print),
+                        "true" => tokens.push(Token::Bool(true)),
+                        "false" => tokens.push(Token::Bool(false)),
+                        "and" => tokens.push(Token::And),
+                        "or" => tokens.push(Token::Or),
+                        "not" => tokens.push(Token::Not),
                         _ => tokens.push(Token::Ident(ident)),
                     }
                 }

@@ -2,5 +2,6 @@ var a                                       # none
 var b = 3                                   # 3
 var c = 3.0                                 # 3.0
 var d = "string!"                           # string!
+var e = c + 0.5                             # 3.5
 
-print(a, b, c, d)                           # Above variables
+print(a, b, c, d, e)                        # Above variables
