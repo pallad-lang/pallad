@@ -29,10 +29,7 @@ Pallad learns from other languages to improve itself, while maintaining a unifie
 ### Implementation
 Pallad is built on **Rust**. Provides a step-by-step code running:
 ```text
--> Tokenize
-   -> Parse
-      -> Compile
-         -> Run
+Tokenize -> Parse -> Compile -> Run
 ```
 Code is passed to the lexer, which converts the text to a list of tokens (tokenize). Then, tokens are passed to the parser to generate statements and create an AST, which is used by the compiler to transform to a bytecode-like stack (program). The program is passed to the VM for execution in order (in Rust).
 
@@ -41,122 +38,40 @@ Pallad uses English keywords (often abbreviated) and standard symbols from other
 
 ### Special Features
 > [!Note]
-> For more details on special features, see the example files and syntax guide.
+> For more details on features, see the [examples](examples/) and [specifications](spec/).
 
-Pallad offers unique features focused on simplicity and programmer quality of life (common features from Python and others are omitted here):
-- Hybrid: Compile to Bytecode, interpret the bytecode
-- Support transpile to other languages besides the interpreter
-- Built-in docstring formatter
-- Keywords for navigation and code organization
-- Expression validation wherever possible
-- Dynamic typing by default
+Pallad offers some unique features:
+- Transpiling to other languages besides the interpreter
+- Dynamic typing by default, strong static typing when needed
 - Optional setters & getters for variables
-- Rich, dynamic, and composite data types:
-  - States
-  - Sets
-  - Pairs
-  - Triplets
-  - Char
-  - Multi-dimensional arrays
-  - Tables
-  - Queues
-  - Callable
-  - Color
-- Full optional support for static typing
+- Rich and dynamic data types
 - Simple public & private access modifiers
-- Variable argument functions
+- Variadic params for functions
 - Named parameters
-- Lambda functions
 - Signals
-- Powerful enums:
-  - Anonymous enums
-  - Anonymous shadow
-  - Named enums
-  - Enums as types
-- `switch` / `case` / `default`
+- Powerful enums
+- Powerful branching with `match`
 - Advanced loops with monitoring
-- Bitwise operations
-- `in` / `not in`
-- `try` / `except` / `else` / `finally`
-- `raise` / `assert`
 - Internal logging
 - Simple I/O
 - `with` environment manager
 - Internal file management
-- Object-oriented programming
-- `class` / `extends`
-- `import` / `exclude`
-- Static variables and functions
+- Object-oriented programming as first-class paradigm
 - Static constructors
-- Constructors with overloading
-- `static` blocks
-- Inner classes
+- Overloading
 
 ## Project Status
 This project is currently in its first development stage.
 
-### Current Features
-This is a list of currently implemented features.
-- Comments:
-  - Single line with `#`
-- Keywords:
-  - `var`
-- Types:
-  - `none`
-  - `int`
-  - `float`
-  - `string`
-- Operators:
-  - `+` - `int`, `float`, `string`
-  - `-` - `int`, `float`
-  - `*` - `int`, `float`, `string`
-  - `/` - `int`, `float`
-  - `//` - `int`, `float`
-  - `%` - `int`, `float`
-- Built-in functions:
-  - `print`
+- Single-line comments with `#`
+- Variable declaration
+- `none`, `int`, `float`, `string` types
+- `+`, `-`, `*`, `/`, `//`, `%` operators
+- Built-in functions: `print`
 
-### Known Issues
-This is a list of known missing points about implemented features listed above:
-- `parser.rs:185-190`: Changing value of a variable needs `var` keyword, otherwise raises parse error `Expected 'var', 'print', or end of line, got Ident(...)`
-- `parser.rs:324-360`: Multi-line expressions raises parse error `Expected integer, float, variable, or '(', got Eol`.
-- `vm.rs:103-128`: Integer operations can overflow, values wrap silently.
+You can see a complete list of features with implementation status in [features document](spec/features.md). Use GitHub issue tracker to see more information for each item.
 
-> [!Note]
-> The items on this list have been queued for resolution.
-
-### Future Improvements
-- **Design:**
-  - Plan for async functionality
-  - New types:
-    - Date / Time / Duration
-    - Struct / Record
-  - Mixed types behavior
-  - Plan for pattern matching
-  - Macro / Metaprogramming
-  - Reflection / Introspection
-  - Multi-threading / Parallel execution
-  - Foreign Function Interface
-- **Core:**
-  - Transpile feature
-- **Standard Library:**
-  - date/time
-  - networking
-  - math
-  - file system utilities
-  - regex/pattern matching
-  - serialization
-- **Tooling & Ecosystem:**
-  - Package Manager
-  - Formatter/Linter
-  - Debugger
-  - REPL
-  - LSP Server
-- **Community & Documentation:**
-  - Tutorials & Examples
-  - Syntax highlighter
-  - Test suite
-  - Discussion/Ideas
+Please see [list of known issues](spec/features.md#known-issues) for possible problems in current features.
 
 ## Install
 Pallad is not yet released as any tagged version, so you need to compile it from source to use it. You need Rust (with Cargo) and a clone of the git repository. When you run `cargo run` in the repository root, binaries will be generated in the `target/` directory. You can use `pallad "path/to/code.pd"` to run your Pallad code.
@@ -203,13 +118,13 @@ for i in range(1, 10):
         if i == 10:
             continue(loops=2) # skips this iteration and the current iteration in outer loop
     match inner_status.status:
-        case LOOP_STATUS_COMPLETE:
+        LOOP_STATUS_COMPLETE:
             print("Inner loop completed successfully.")
-        case LOOP_STATUS_FULL_SKIP:
+        LOOP_STATUS_FULL_SKIP:
             print("Inner loop was never executed.")
-        case LOOP_STATUS_HAS_SKIP:
+        LOOP_STATUS_HAS_SKIP:
             print(f"Inner loop was skipped {inner_status.skip_count} times.")
-        case LOOP_STATUS_BREAK:
+        LOOP_STATUS_BREAK:
             print(f"Inner loop broke at iteration {inner_status.break_iteration}.")
     print(f"Inner loop executed: {inner_status.iter_executed} of {inner_status.iter_count} ({inner_status.iter_completely_executed} iterations completed)")
 else:

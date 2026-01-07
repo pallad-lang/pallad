@@ -50,7 +50,7 @@ Currently implemented types:
 - **`none`**: Empty value
 - **`float`**: Floating-point numbers  
 - **`int`**: Integer numbers  
-- **`string`**: Text enclosed in `""` or `''`
+- **`string`**: Text enclosed in `""`
 
 > **Important**  
 > Most Pallad types are not yet implemented. The following list represents planned types (subject to change):

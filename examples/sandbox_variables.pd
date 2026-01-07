@@ -1,0 +1,6 @@
+var a                                       # none
+var b = 3                                   # 3
+var c = 3.0                                 # 3.0
+var d = "string!"                           # string!
+
+print(a, b, c, d)                           # Above variables

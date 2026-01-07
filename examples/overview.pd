@@ -1,5 +1,9 @@
 # Pallad example code
 # This file shows basic syntax for Pallad language.
+#
+# IMPORTANT: This file doesn't work with current implementation of Pallad, because there is a lot
+# of missing features that are used here. Please DON'T TRY TO RUN THIS CODE, It leads to error and
+# may have unexpected result.
 
 # Class name is optional
 # Use PascalCase for class names.
@@ -9,7 +13,6 @@ class Example
 extends Object
 
 # This line is a comment.
-"And this line"
 """
 Also these lines
 are comment
@@ -131,8 +134,8 @@ name, _static_typed, none_by_default = "Joe", -100, none
 # Can be used in function return type to say this function has return value (Compared to "void").
 var variant_variable = 10
 func get_value() -> Variant: # Returns an unknown typed value
-    # Functions will be explained later.
-    return none
+	# Functions will be explained later.
+	return none
 
 # 2. None
 # Represents the absence of a value. Default value for uninitialized variables and constants.
@@ -146,7 +149,7 @@ var none_by_default
 # Can't be used with ": void".
 # AST isn't supported.
 func exit() -> void:
-    pass
+	pass
 
 # 4. Boolean
 # `true` and `false` are booleans.
@@ -210,14 +213,14 @@ var prime_numbers: set[int] = {2, 3, 5, 7, 2} # Second 2 will be removed without
 # A single character.
 # Can be used with ": char".
 # AST is limited. (Will be passed to string)
-# ' is more recommended than ", both are supported.
+# Just use single quotes (') for chars.
 var letter: char = 'A'
 
 # 12. String
 # Array of chars.
 # Can be used with ": string".
 # AST is supported.
-# " is more recommended than ', both are supported.
+# Just use double quotes (") for strings.
 var font := "Vazirmatn"
 
 # 13. Dictionary
@@ -247,8 +250,8 @@ var fifteen := byte("00001111")
 # Can be used with ": buffer".
 # AST is limited (Will be parsed to array)
 var file: buffer = [
-    01001001, 10001101, 00000000,
-    11100100, 00010011, 00000001,
+	01001001, 10001101, 00000000,
+	11100100, 00010011, 00000001,
 ]
 var message := buffer("Hello World!", buffer.ENCODE_UTF_8)
 
@@ -347,7 +350,7 @@ var blue := color(0, 0, 1) # By constructor
 # All functions are available as callable in parent object's variables and can be called by "call()" function.
 # Use snake_case for function names and parameters.
 func _on_data_received(data: string) -> void:
-    print(f"Data received: {data}")
+	print(f"Data received: {data}")
 
 func sum(...nums: array[int]) -> int:
 	var sum: int = 0
@@ -374,23 +377,23 @@ data_received.emit("Test")
 # "@anonymous_shadow" annotation provides a way to use items of these enums directly.
 # Anonymous enum
 enum:
-    ON, # 0
-    OFF, # 1
-    BOTH, # 2, Last "," is optional but recommended
+	ON, # 0
+	OFF, # 1
+	BOTH, # 2, Last "," is optional but recommended
 
 print(OFF) # 1
 
 @anonymous_shadow # Will be accessible without [code]Error.[/code] prefix.
 enum Error:
-    OK, # 0
-    ERROR, # 1
+	OK, # 0
+	ERROR, # 1
 
 print(OK) # 0
 print(Error.OK) # 0
 
 # Use PascalCase for enum names.
 enum TimeStates:
-    # Use UPPER_SNAKE_CASE for enum items.
+	# Use UPPER_SNAKE_CASE for enum items.
 	DAY, # 0
 	NIGHT = 6,
 	MIDNIGHT = 11,
@@ -406,24 +409,24 @@ var time: TimeStates = TimeStates.DAY
 
 # Conditions can be executed with "if", "elif", and "else":
 if is_here:
-    pass
+	pass
 elif is_valid:
-    pass
+	pass
 else:
-    pass
+	pass
 
 # Boolean operators are "and", "or", and "not":
 print(not false or true and true)
 
-# Supports switches:
+# Supports pattern matching (switch):
 # Just first matching branch will be executed.
 # "default" branch is optional.
-switch time:
-	case TimeStates.DAY:
+match time:
+	TimeStates.DAY:
 		pass
-	case TimeStates.NIGHT, TimeStates.MORNING:
+	TimeStates.NIGHT, TimeStates.MORNING:
 		pass
-	default:
+	_:
 		pass
 
 # Supports for, while, and do ... while loops.
@@ -457,17 +460,17 @@ for i in range(1, 10):
 		if i == 10:
 			continue(loops=2) # skips this iteration and current iteration in outer loop
 	match inner_status.status:
-		case LOOP_STATUS_COMPLETE:
+		LOOP_STATUS_COMPLETE:
 			print("Inner loop was passed completely.")
-		case LOOP_STATUS_FULL_SKIP:
+		LOOP_STATUS_FULL_SKIP:
 			print("Inner loop wasn't executed any time.")
-		case LOOP_STATUS_HAS_SKIP:
+		LOOP_STATUS_HAS_SKIP:
 			print(f"Inner loop was skipped for {inner_status.skip_count} times.")
-		case LOOP_STATUS_BREAK:
+		LOOP_STATUS_BREAK:
 			print(f"Inner loop was broke at {inner_status.break_iteration} iteration.")
 	print(f"Inner loop executed: {inner_status.iter_executed} of {inner_status.iter_count} ({inner_status.iter_completely_executed} iterations were completed)")
 else:
-    print("Nothing) # when loop number is 0 (e.g. for i in []), same as LOOP_STATUS_FULL_SKIP
+	print("Nothing") # when loop number is 0 (e.g. for i in []), same as LOOP_STATUS_FULL_SKIP
 
 # Here is more examples for operators:
 var x: int = 10
@@ -525,19 +528,22 @@ except Error as error:
 	print("Generic error: ", error)
 else:
 	print(f"X: {x}") # At success
-finally:
+ensure:
 	print("Cleanup...") # Even at unexpected error
 
 raise "Custom Error!"
 
 assert(x > 0, "X should be positive!")
 
-# Provides internal "log" class for simple logging:
-log.auto_write("program.log", clear=true)
-log.add("Test")
-log.error(f"Error: {e}")
-log.message("Red!", Color.RED)
-log.export("current_run.log")
+# Provides internal "Logger" class for simple logging:
+Logger.auto_write("program.log", clear=false)
+Logger.info("Test")
+Logger.warn("Something isn't good!")
+try:
+	raise "Custom Error!"
+except Error as e:
+	Logger.error(f"Error: {e}")
+Logger.save("current_run.log")
 
 # Input from terminal is simple:
 var name: string = input("Enter your name: ")
@@ -555,7 +561,6 @@ Line 3
 try:
 	# "with" provides auto-close:
 	with open("data.txt", "r") as file:
-		print(file.read())
 		for line in file.lines:
 			print(f"Line: {line}")
 except Error:
@@ -564,7 +569,7 @@ except Error:
 with open("data.txt", "w") as file:
 	file.write("Some text.")
 
-with open("data.txt", "a") as file
+with open("data.txt", "a") as file:
 	file.write("This is new line.\n")
 
 # Let's go deeper and explore object-oriented programming in Pallad.
@@ -609,54 +614,55 @@ static:
 #import user
 # Wait! This is just a showcase and there isn't any other file, so we use
 # inner-classes to define our user:
-# Inner-class declaration will be moved to top.
 class User:
-    #extends Object # <- Optional
+	#extends Object # <- Optional
 
-    static var world_id: string
-    var name: string
-    var age: int
+	static var world_id: string
+	var name: string
+	var age: int
 
-    # You can place codes here, and codes will be ran when you run this file,
-    # because inner-classes will be initialized in same time as current class.
-    # Or you can use "static:" block to do same thing.
+	# You can place codes here, and codes will be ran when you run this file,
+	# because inner-classes will be initialized in same time as current class.
+	# Or you can use "static:" block to do same thing.
 
-    # A class can be instanced with "Class()" syntax (in this case: "User()").
-    # This will be done with constructors (each class have one default constructor).
-    # But we need to customize instances, so let's define our constructor.
-    # Before this, sometimes we need to initialize somethings before any instantiation
-    # (in this case we just want to show how!), Pallad provides "static constructor"
-    # for this need (this is optional, default static constructor always returns true):
-    static constructor -> bool:
-        if world_id == none or world_id == "":
-            print("Failed to initialize constructors!")
-            return false
-        print("Constructors initialized")
-        return true
-    # This constructor ensures any instance will be created in valid environment, as
-    # you can see this constructor returns a boolean that shows initialization was successful
-    # or no.
+	# A class can be instanced with "Class()" syntax (in this case: "User()").
+	# This will be done with constructors (each class have one default constructor).
+	# But we need to customize instances, so let's define our constructor.
+	# Before this, sometimes we need to initialize somethings before any instantiation
+	# (in this case we just want to show how!), Pallad provides "static constructor"
+	# for this need (this is optional, default static constructor always returns true):
+	static constructor -> bool:
+		if world_id == none or world_id == "":
+			print("Failed to initialize constructors!")
+			return false
+		print("Constructors initialized")
+		return true
+	# This constructor ensures any instance will be created in valid environment, as
+	# you can see this constructor returns a boolean that shows initialization was successful
+	# or no.
 
-    # And we can define standard constructors now:
-    constructor(name: string, age: int):
-        self.name = name
-        self.age = age
-        print("Instance created")
+	# And we can define standard constructors now:
+	# As you can see "self" points to instance and is optional in these cases.
+	# Here we added underscore to constructor parameter names to avoid conflicts with class variable names.
+	constructor(_name: string, _age: int):
+		name = _name
+		age = _age
+		print("Instance created")
 
-    # Just to show overloading, we create another constructor:
-    constructor():
-        self.name = "Unknown"
-        self.age = 0
-        print("Instance created")
-    # Pallad will detect constructor signature based on parameters and calls the correct one.
+	# Just to show overloading, we create another constructor:
+	constructor():
+		name = "Unknown" # or self.name = "Unknown"
+		age = 0
+		print("Instance created")
+	# Pallad will detect constructor signature based on parameters and calls the correct one.
 
-    # Like variables, instances can have functions.
-    func get_name() -> string:
-        return name
+	# Like variables, instances can have functions.
+	func get_name() -> string:
+		return name
 
-    # Static functions can access only static variables.
-    static func get_world_id() -> string:
-        return world_id
+	# Static functions can access only static variables.
+	static func get_world_id() -> string:
+		return world_id
 
 # Now we can use User class:
 User.world_id = "13x1c_43oiu"
@@ -694,22 +700,31 @@ else:
 #var user := User()
 
 # Constructors can be used in more styles:
+# 
+# Here, we used "name" and "age" for constructor parameters. Since in functions (like constructor) "name" points to
+# function parameter instead of higher-level instance or class member, we have to use "self" to point to current
+# instance.
+# When you use other names for parameters you can ignore "self", because there is no function parameter in current
+# function (constructor) and "name" points to instance variable. For example, you can use "_name" and "_age" for
+# parameter names in third constructor in this class and then use them with "name = _name" and "age = _age". Since
+# Pallad supports both by-name and by-order function (and constructor) calls, you can use third constructor in both
+# cases with order-based parameters (AnotherUser("Alex", 42)) without any error.
 class AnotherUser:
-    var name: string
-    var age: int
+	var name: string
+	var age: int
 
-    constructor(): # Simple constructor
-        self.name = "Unknown"
-        self.age = 0
+	constructor(): # Simple constructor
+		self.name = "Unknown"
+		self.age = 0
 
-    constructor(name: string): # Constructor with parameter
-        self.name = name
-        self.age = 0
+	constructor(name: string): # Constructor with parameter
+		self.name = name
+		self.age = 0
 
-    constructor(name: string, age: int): # Overloading
-        self.name = name
-        self.age = age
+	constructor(name: string, age: int): # Overloading
+		self.name = name
+		self.age = age
 
-    constructor(copy: User): # Copy constructor
-        self.name = copy.name
-        self.age = copy.age
+	constructor(copy: User): # Copy constructor
+		self.name = copy.name
+		self.age = copy.age
