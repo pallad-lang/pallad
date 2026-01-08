@@ -32,7 +32,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 - [ ] `variant`
 - [ ] `void`
 - [x] `none`
-- [ ] `bool`
+- [x] `bool`
 - [x] `int`
 - [ ] `byte`
 - [ ] `char`
@@ -68,7 +68,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 - [x] `//`
 - [x] `%`
 - [ ] `**`
-- [ ] `and` `or` `not`
+- [x] `and` `or` `not`
 - [ ] `in` `not in`
 - [ ] `==` `!=`
 - [ ] `>` `>=` `<` `<=`

@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Stmt, BinOp};
+use crate::ast::{Expr, Stmt, BinOp, UnOp};
 use crate::lexer::Token;
 use crate::error::PalladError;
 
@@ -215,7 +215,49 @@ impl Parser {
     /// assert_eq!(expr, Expr::Int(42));
     /// ```
     pub fn parse_expr(&mut self) -> Result<Expr, PalladError> {
-        self.parse_add_sub()
+        self.parse_or()
+    }
+
+    /// Parses a left-associative chain of OR expressions.
+    ///
+    /// Continues consuming `or` operators and their right-hand AND operands until a non-OR token is reached.
+    /// OR has the lowest precedence among binary operators.
+    fn parse_or(&mut self) -> Result<Expr, PalladError> {
+        let mut left = self.parse_and()?;
+
+        while matches!(self.current(), Some(Token::Or)) {
+            self.advance();
+            let right = self.parse_and()?;
+            left = Expr::Binary { left: Box::new(left), op: BinOp::Or, right: Box::new(right) };
+        }
+
+        Ok(left)
+    }
+
+    /// Parses a left-associative chain of AND expressions.
+    ///
+    /// Continues consuming `and` operators and their right-hand NOT operands until a non-AND token is reached.
+    /// AND has the lowest precedence among binary operators after OR.
+    fn parse_and(&mut self) -> Result<Expr, PalladError> {
+        let mut left = self.parse_not()?;
+
+        while matches!(self.current(), Some(Token::And)) {
+            self.advance();
+            let right = self.parse_not()?;
+            left = Expr::Binary { left: Box::new(left), op: BinOp::And, right: Box::new(right) };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_not(&mut self) -> Result<Expr, PalladError> {
+        if let Some(Token::Not) = self.current() {
+            self.advance();
+            let expr = self.parse_not()?;
+            Ok(Expr::Unary { op: UnOp::Not, expr: Box::new(expr) })
+        } else {
+            self.parse_add_sub()
+        }
     }
 
     /// Parses a left-associative chain of addition and subtraction expressions.
@@ -327,14 +369,11 @@ impl Parser {
         match self.current().cloned() {
             Some(Token::Minus) => {
                 self.advance();
-                let operand = self.parse_factor()?;
-                Ok(Expr::Binary {
-                    left: Box::new(Expr::Int(0)),
-                    op: BinOp::Sub,
-                    right: Box::new(operand),
-                })
+                let expr = self.parse_factor()?;
+                Ok(Expr::Unary { op: UnOp::Neg, expr: Box::new(expr) })
             }
             Some(Token::None) => { self.advance(); Ok(Expr::None) }
+            Some(Token::Bool(b)) => { self.advance(); Ok(Expr::Bool(b)) }
             Some(Token::Int(n)) => { self.advance(); Ok(Expr::Int(n)) }
             Some(Token::Float(f)) => { self.advance(); Ok(Expr::Float(f)) }
             Some(Token::Str(s)) => { self.advance(); Ok(Expr::Str(s)) }

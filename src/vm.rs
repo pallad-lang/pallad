@@ -10,6 +10,10 @@ enum Op {
     Div,
     IntDiv,
     Mod,
+    And,
+    Or,
+    Neg,
+    Not,
 }
 
 impl Op {
@@ -21,6 +25,10 @@ impl Op {
             Op::Div => "divide",
             Op::IntDiv => "integer-divide",
             Op::Mod => "mod",
+            Op::And => "and",
+            Op::Or => "or",
+            Op::Neg => "negate",
+            Op::Not => "not",
         }
     }
 }
@@ -58,6 +66,8 @@ impl VM {
     /// - `UnknownBuiltin` if `CallBuiltin` targets an unrecognized builtin.
     /// - `DivisionByZero` for division/modulo by zero.
     /// - `TypeMismatch` for unsupported operand type combinations (e.g., invalid types for `IntDiv`).
+    /// - `UnaryTypeMismatch` for invalid unary operation type combinations (e.g., negating a string).
+    /// - `NegationOverflow` when negating i64::MIN.
     ///
     /// # Examples
     ///
@@ -78,6 +88,7 @@ impl VM {
         for instr in program {
             match instr {
                 Instr::LoadNone => self.stack.push(Value::None),
+                Instr::LoadBool(b) => self.stack.push(Value::Bool(b)),
                 Instr::LoadInt(n) => self.stack.push(Value::Int(n)),
                 Instr::LoadFloat(f) => self.stack.push(Value::Float(f)),
                 Instr::LoadStr(s) => self.stack.push(Value::Str(s)),
@@ -93,22 +104,34 @@ impl VM {
                     self.globals.insert(name, val);
                 }
                 Instr::Add => {
-                    self.execute_arithmetic(Op::Add)?;
+                    self.execute_op(Op::Add)?;
                 }
                 Instr::Sub => {
-                    self.execute_arithmetic(Op::Sub)?;
+                    self.execute_op(Op::Sub)?;
                 }
                 Instr::Mul => {
-                    self.execute_arithmetic(Op::Mul)?;
+                    self.execute_op(Op::Mul)?;
                 }
                 Instr::Div => {
-                    self.execute_arithmetic(Op::Div)?;
+                    self.execute_op(Op::Div)?;
                 }
                 Instr::IntDiv => {
-                    self.execute_arithmetic(Op::IntDiv)?;
+                    self.execute_op(Op::IntDiv)?;
                 }
                 Instr::Mod => {
-                    self.execute_arithmetic(Op::Mod)?;
+                    self.execute_op(Op::Mod)?;
+                }
+                Instr::And => {
+                    self.execute_op(Op::And)?;
+                }
+                Instr::Or => {
+                    self.execute_op(Op::Or)?;
+                }
+                Instr::Neg => {
+                    self.execute_op(Op::Neg)?;
+                }
+                Instr::Not => {
+                    self.execute_op(Op::Not)?;
                 }
                 Instr::CallBuiltin { name, argc } => {
                     if name == "print" {
@@ -120,6 +143,7 @@ impl VM {
                         for arg in args.into_iter().rev() {
                             match arg {
                                 Value::None => println!("<none>"),
+                                Value::Bool(b) => println!("{}", b),
                                 Value::Int(n) => println!("{}", n),
                                 Value::Float(f) => println!("{}", f),
                                 Value::Str(s) => println!("{}", s),
@@ -138,20 +162,47 @@ impl VM {
         Ok(())
     }
 
-    /// Executes a binary arithmetic operation by popping two operands and
-    /// pushing the resulting value back onto the stack.
-    ///
-    /// The `op` parameter is used for error reporting to indicate which
-    /// operation caused a stack underflow in `pop_two_operands`.
-    fn execute_arithmetic(&mut self, op: Op) -> Result<(), PalladError> {
-        let result = self.pop_two_operands(op)?;
+    fn execute_op(&mut self, op: Op) -> Result<(), PalladError> {
+        let result = if matches!(op, Op::Neg | Op::Not) {
+            self.pop_one_operand(op)?
+        } else {
+            self.pop_two_operands(op)?
+        };
         self.stack.push(result);
         Ok(())
     }
 
+    fn pop_one_operand(&mut self, op: Op) -> Result<Value, PalladError> {
+        let v = self.stack.pop()
+            .ok_or(PalladError::StackUnderflow { operation: op.name() })?;
+
+        Ok(match (&v, &op) {
+            // Valid operations:
+            // Neg: int, float
+            // Not: any (uses truthiness)
+            
+            // negative (-)
+            (Value::Int(v), Op::Neg) => {
+                v.checked_neg()
+                    .map(Value::Int)
+                    .ok_or(PalladError::NegationOverflow)?
+            }
+            (Value::Float(v), Op::Neg) => Value::Float(-v),
+
+            // not (not)
+            (v, Op::Not) => Value::Bool(!Self::value_is_true(v)),
+
+            _ => return Err(PalladError::UnaryTypeMismatch {
+                value: v,
+                operation: op.name()
+            }),
+        })
+
+    }
+
     /// Pop two values from the VM stack and compute the binary operation identified by `op`.
     ///
-    /// Supported operation names: `Op` enum.
+    /// Supported operations: `+`, `-`, `*`, `/`, `//`, `%`, `and`, `or`
     /// On success returns the resulting `Value` produced by applying the operation to the second-to-top
     /// stack value (left operand) and the top stack value (right operand).
     ///
@@ -211,11 +262,11 @@ impl VM {
         }
 
         Ok(match (&a, &b, &op) {
-            // 'none' is invalid in all operations.
+            // 'none' is invalid in '+ - * / // %' operations.
             // Other invalid operations:
             // string - any         any - string        int * string        float * string
             // string * float       string / any        any / string        string // any
-            // any // string       string % any        any % string
+            // any // string        string % any        any % string
             
             // add (+)
             // int
@@ -308,6 +359,12 @@ impl VM {
             (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
             (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
 
+            // and (and)
+            (a, b, Op::And) => Value::Bool(Self::value_is_true(a) && Self::value_is_true(b)),
+
+            // or (or)
+            (a, b, Op::Or) => Value::Bool(Self::value_is_true(a) || Self::value_is_true(b)),
+
             _ => return Err(PalladError::TypeMismatch {
                 left: a,
                 right: b,
@@ -315,4 +372,14 @@ impl VM {
             }),
         })
     }
+
+    fn value_is_true(value: &Value) -> bool {
+        match value {
+            Value::None => false,
+            Value::Bool(b) => *b,
+            Value::Int(i) => *i != 0,
+            Value::Float(f) => *f != 0.0,
+            Value::Str(s) => !s.is_empty(),
+        }
+    } 
 }

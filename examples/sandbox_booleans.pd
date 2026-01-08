@@ -1,0 +1,61 @@
+var a = true                                        # true
+var b = false                                       # false
+
+print(a, b, "")                                     # true false
+
+var c = not a                                       # false
+var d = not b                                       # true
+
+print(c, d, "")                                     # false true
+print(not true, not false, "")                      # false true
+
+var e = true and true                               # true
+var f = true and false                              # false
+var g = false and true                              # false
+var h = false and false                             # false
+
+print(e, f, g, h, "")                               # true false false false
+
+var i = true or true                                # true
+var j = true or false                               # true
+var k = false or true                               # true
+var l = false or false                              # false
+
+print(i, j, k, l, "")                               # true true true false
+
+var complex1 = not(true and false)                  # true
+var complex2 = not(true or false)                   # false
+var complex3 = not true or false                    # false
+var complex4 = not false and true                   # true
+
+print(complex1, complex2, complex3, complex4, "")   # true false false true
+
+var zero = 0                                        # false as bool
+var one = 1                                         # true as bool
+var neg = -42                                       # true as bool
+
+print(not zero, not one, not neg, "")               # true false false
+print(zero or one, zero and one, "")                # true false
+print(neg and one, neg or zero, "")                 # true true
+
+var zerof = 0.0                                     # false as bool
+var posf = 1.5                                      # true as bool
+var negf = -2.7                                     # true as bool
+
+print(not zerof, not posf, not negf, "")            # true false false
+print(zerof or posf, zerof and posf, "")            # true false
+print(negf and posf, negf or zerof, "")             # true true
+
+var empty = ""                                      # false as bool
+var str_a = "a"                                     # true as bool
+var numstr = "0"                                    # true as bool
+
+print(not empty, not str_a, not numstr, "")         # true false false
+print(empty and str_a, str_a and empty, "")         # false false
+print(empty or str_a, empty or numstr, "")          # true true
+
+var mix1 = (true or false) and (not false)          # true
+var mix2 = (false and true) or (not true)           # false
+var mix3 = (true or (false and not true))           # true
+
+print(mix1, mix2, mix3)                             # true false true

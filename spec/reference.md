@@ -48,6 +48,7 @@ Pallad is dynamically typed, meaning types are determined at runtime rather than
 
 Currently implemented types:
 - **`none`**: Empty value
+- **`bool`**: `true`/`false`
 - **`float`**: Floating-point numbers  
 - **`int`**: Integer numbers  
 - **`string`**: Text enclosed in `""`
@@ -82,9 +83,6 @@ In boolean contexts (such as `if` or `while` conditions), non-boolean values are
 | `string` | `""` (empty string)   |
 
 All other values are considered `true`.
-
-> **Note**  
-> `bool` type is not yet implemented. This section describes planned behavior.
 
 ---
 

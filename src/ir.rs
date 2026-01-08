@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub enum Instr {
     LoadNone,
+    LoadBool(bool),
     LoadInt(i64),
     LoadFloat(f64),
     LoadStr(String),
@@ -12,6 +13,10 @@ pub enum Instr {
     Div,
     IntDiv,
     Mod,
+    And,
+    Or,
+    Neg,
+    Not,
     CallBuiltin {
         name: String,
         argc: usize,

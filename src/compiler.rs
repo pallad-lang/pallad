@@ -1,4 +1,4 @@
-use crate::ast::{Stmt, Expr, BinOp};
+use crate::ast::{BinOp, Expr, Stmt, UnOp};
 use crate::error::PalladError;
 use crate::ir::Instr;
 
@@ -49,8 +49,9 @@ pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
 
 /// Emits IR instructions for `expr` into the provided `program` buffer.
 ///
-/// Supports integer and float literals, variable loads, binary operations (left then right),
-/// and builtin function calls (arguments compiled in order).
+/// Supports literals, variable loads, /// unary operations (operand first,
+/// then operation), binary operations (left then right), and builtin function
+/// calls (arguments compiled in order).
 ///
 /// # Examples
 ///
@@ -62,6 +63,7 @@ pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
 fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {
     match expr {
         Expr::None => program.push(Instr::LoadNone),
+        Expr::Bool(b) => program.push(Instr::LoadBool(b)),
         Expr::Int(n) => program.push(Instr::LoadInt(n)),
         Expr::Float(f) => program.push(Instr::LoadFloat(f)),
         Expr::Str(s) => program.push(Instr::LoadStr(s)),
@@ -76,6 +78,15 @@ fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {
                 BinOp::Div => program.push(Instr::Div),
                 BinOp::IntDiv => program.push(Instr::IntDiv),
                 BinOp::Mod => program.push(Instr::Mod),
+                BinOp::And => program.push(Instr::And),
+                BinOp::Or => program.push(Instr::Or),
+            }
+        }
+        Expr::Unary { op, expr } => {
+            compile_expr(*expr, program);
+            match op {
+                UnOp::Neg => program.push(Instr::Neg),
+                UnOp::Not => program.push(Instr::Not),
             }
         }
         Expr::Call { name, args } => {
