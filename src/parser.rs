@@ -298,15 +298,13 @@ impl Parser {
         Ok(left)
     }
 
-    /// Parses multiplicative operations (`*`, `/`, `//`, `%`) with left-to-right associativity and returns the resulting expression.
+    /// Parses consecutive multiplicative operators (`*`, `/`, `//`, `%`) into a left-associative expression.
     ///
-    /// This consumes a leading factor and then repeatedly consumes any consecutive multiplicative operator and factor,
-    /// building left-associative `Expr::Binary` nodes until a non-multiplicative token is encountered.
+    /// The produced expression represents multiplication, division, integer division, or modulo operations and sits between exponentiation and addition/subtraction in precedence.
     ///
     /// # Examples
     ///
     /// ```
-    /// // Parse `2 * 3`
     /// let mut parser = Parser::new(vec![Token::Int(2), Token::Star, Token::Int(3)]);
     /// let expr = parser.parse_mul_div().unwrap();
     /// match expr {
@@ -315,28 +313,28 @@ impl Parser {
     /// }
     /// ```
     fn parse_mul_div(&mut self) -> Result<Expr, PalladError> {
-        let mut left = self.parse_factor()?;
+        let mut left = self.parse_unary()?;
 
         while let Some(tok) = self.current() {
             left = match tok {
                 Token::Star => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_unary()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Mul, right: Box::new(right) }
                 }
                 Token::Slash => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_unary()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Div, right: Box::new(right) }
                 }
                 Token::IntDiv => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_unary()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::IntDiv, right: Box::new(right) }
                 }
                 Token::Mod => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_unary()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Mod, right: Box::new(right) }
                 }
                 _ => break,
@@ -344,6 +342,54 @@ impl Parser {
         }
 
         Ok(left)
+    }
+
+    /// Parses unary expressions (negation).
+    ///
+    /// Handles the unary minus operator, which has lower precedence than exponentiation
+    /// but higher precedence than binary multiplication/division.
+    fn parse_unary(&mut self) -> Result<Expr, PalladError> {
+        if let Some(Token::Minus) = self.current() {
+            self.advance();
+            let expr = self.parse_unary()?;  // Right-recursive for multiple unaries
+            Ok(Expr::Unary { op: UnOp::Neg, expr: Box::new(expr) })
+        } else {
+            self.parse_pow()
+        }
+    }
+
+    /// Parses exponentiation expressions, consuming one or more `^` (Pow) operations and returning the resulting expression.
+    ///
+    /// This method parses a primary factor and then repeatedly consumes `Pow` tokens, combining the parsed operands into right-associative `Expr::Binary` nodes with `BinOp::Pow`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = vec![Token::Int(2), Token::Pow, Token::Int(3), Token::Pow, Token::Int(2)];
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_pow().unwrap();
+    /// // Expect a right-associative parse: (2 ^ (3 ^ 2))
+    /// match expr {
+    ///     Expr::Binary { op: BinOp::Pow, left, right } => {
+    ///         // left should itself be a Binary pow node
+    ///         match *left {
+    ///             Expr::Binary { op: BinOp::Pow, .. } => {}
+    ///             _ => panic!("expected left to be a Pow binary expression"),
+    ///         }
+    ///     }
+    ///     _ => panic!("expected a Binary Pow expression"),
+    /// }
+    /// ```
+    fn parse_pow(&mut self) -> Result<Expr, PalladError> {
+        let left = self.parse_factor()?;
+
+        if matches!(self.current(), Some(Token::Pow)) {
+            self.advance();
+            let right = self.parse_unary()?;
+            Ok(Expr::Binary { left: Box::new(left), op: BinOp::Pow, right: Box::new(right) })
+        } else {
+            Ok(left)
+        }
     }
 
     /// Parses and returns a single factor: an integer, float, identifier, or a parenthesized expression.
@@ -367,11 +413,6 @@ impl Parser {
     /// ```
     fn parse_factor(&mut self) -> Result<Expr, PalladError> {
         match self.current().cloned() {
-            Some(Token::Minus) => {
-                self.advance();
-                let expr = self.parse_factor()?;
-                Ok(Expr::Unary { op: UnOp::Neg, expr: Box::new(expr) })
-            }
             Some(Token::None) => { self.advance(); Ok(Expr::None) }
             Some(Token::Bool(b)) => { self.advance(); Ok(Expr::Bool(b)) }
             Some(Token::Int(n)) => { self.advance(); Ok(Expr::Int(n)) }

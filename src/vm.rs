@@ -10,6 +10,7 @@ enum Op {
     Div,
     IntDiv,
     Mod,
+    Pow,
     And,
     Or,
     Neg,
@@ -17,6 +18,18 @@ enum Op {
 }
 
 impl Op {
+    /// Provide a short, human-readable name for the operation.
+    ///
+    /// The returned value is a `&'static str` describing the operation (e.g., `"add"`, `"power"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::vm::Op;
+    ///
+    /// assert_eq!(Op::Add.name(), "add");
+    /// assert_eq!(Op::Pow.name(), "power");
+    /// ```
     pub fn name(&self) -> &'static str {
         match self {
             Op::Add => "add",
@@ -25,6 +38,7 @@ impl Op {
             Op::Div => "divide",
             Op::IntDiv => "integer-divide",
             Op::Mod => "mod",
+            Op::Pow => "power",
             Op::And => "and",
             Op::Or => "or",
             Op::Neg => "negate",
@@ -121,6 +135,9 @@ impl VM {
                 Instr::Mod => {
                     self.execute_op(Op::Mod)?;
                 }
+                Instr::Pow => {
+                    self.execute_op(Op::Pow)?;
+                }
                 Instr::And => {
                     self.execute_op(Op::And)?;
                 }
@@ -200,43 +217,23 @@ impl VM {
 
     }
 
-    /// Pop two values from the VM stack and compute the binary operation identified by `op`.
+    /// Pop two values from the VM stack and compute the specified binary operation.
     ///
-    /// Supported operations: `+`, `-`, `*`, `/`, `//`, `%`, `and`, `or`
-    /// On success returns the resulting `Value` produced by applying the operation to the second-to-top
-    /// stack value (left operand) and the top stack value (right operand).
+    /// The top of the stack is the right operand and the second-to-top is the left operand.
+    /// Supported operations include addition, subtraction, multiplication, division, integer division, modulus, exponentiation, logical `and`, and logical `or`.
     ///
     /// # Parameters
     ///
-    /// - `op`: The operation to perform; must be one of the supported names above.
+    /// - `op`: The binary operation to apply to the two popped operands.
     ///
     /// # Returns
     ///
-    /// The resulting `Value` for the performed operation, or an error for stack underflow, division by
-    /// zero (for `Div`, `IntDiv`, `Mod`), or a type mismatch when operands are incompatible.
+    /// `Ok(Value)` containing the result of applying `op` to the left and right operands, or an `Err(PalladError)` for stack underflow, division-by-zero, invalid type combinations, or other operation-specific errors.
     ///
     /// # Examples
     ///
     /// ```
-    /// use std::collections::HashMap;
-    ///
-    /// // Minimal VM and Value setup for the example
-    /// #[derive(Debug, PartialEq)]
-    /// enum Value { Int(i64), Float(f64) }
-    /// struct VM { stack: Vec<Value>, globals: HashMap<String, Value> }
-    /// impl VM {
-    ///     fn new() -> Self { VM { stack: Vec::new(), globals: HashMap::new() } }
-    ///     fn pop_two_operands(&mut self, op: Op) -> Result<Value, String> {
-    ///         let b = self.stack.pop().ok_or("underflow")?;
-    ///         let a = self.stack.pop().ok_or("underflow")?;
-    ///         match (a, b, op) {
-    ///             (Value::Int(a), Value::Int(b), Op::Add) => Ok(Value::Int(a + b)),
-    ///             (Value::Float(a), Value::Float(b), Op::Add) => Ok(Value::Float(a + b)),
-    ///             _ => Err("type mismatch".to_string())
-    ///         }
-    ///     }
-    /// }
-    ///
+    /// // Push 2 then 3 so left=2, right=3 for Add -> 5
     /// let mut vm = VM::new();
     /// vm.stack.push(Value::Int(2));
     /// vm.stack.push(Value::Int(3));
@@ -260,9 +257,25 @@ impl VM {
                 return Err(PalladError::DivisionByZero { operation: op.name() });
             }
         }
+        // Check for 0 ** 0
+        if matches!(op, Op::Pow) {
+            let left_is_zero = match &a {
+                Value::Int(n) => *n == 0,
+                Value::Float(f) => *f == 0.0,
+                _ => false, // Others raise PalladError::TypeMismatch
+            };
+            let right_is_zero = match &b {
+                Value::Int(n) => *n == 0,
+                Value::Float(f) => *f == 0.0,
+                _ => false, // Others raise PalladError::TypeMismatch
+            };
+            if left_is_zero && right_is_zero {
+                return Err(PalladError::ZeroPowerZero);
+            }
+        }
 
         Ok(match (&a, &b, &op) {
-            // 'none' is invalid in '+ - * / // %' operations.
+            // 'none' is invalid in '+ - * / // % **' operations.
             // Other invalid operations:
             // string - any         any - string        int * string        float * string
             // string * float       string / any        any / string        string // any
@@ -358,6 +371,27 @@ impl VM {
             // float
             (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
             (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
+
+            // power (**)
+            // int
+            (Value::Int(a), Value::Int(b), Op::Pow) => {
+                if *b < 0 || *b > u32::MAX as i64 {
+                    // Negative or large exponents: use float arithmetic
+                    Value::Float((*a as f64).powf(*b as f64))
+                } else {
+                    // Non-negative exponent that fits in u32: use integer pow
+                    a.checked_pow(*b as u32)
+                        .map(Value::Int)
+                        .unwrap_or_else(|| {
+                            // Overflow: fall back to float
+                            Value::Float((*a as f64).powf(*b as f64))
+                        })
+                }
+            }
+            (Value::Int(a), Value::Float(b), Op::Pow) => Value::Float((*a as f64).powf(*b)),
+            // float
+            (Value::Float(a), Value::Int(b), Op::Pow) => Value::Float(a.powf(*b as f64)),
+            (Value::Float(a), Value::Float(b), Op::Pow) => Value::Float(a.powf(*b)),
 
             // and (and)
             (a, b, Op::And) => Value::Bool(Self::value_is_true(a) && Self::value_is_true(b)),

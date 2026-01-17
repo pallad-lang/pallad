@@ -16,6 +16,7 @@ pub enum Token {
     Slash,        // '/'
     IntDiv,       // '//'
     Mod,          // '%'
+    Pow,          // '**'
     Eq,           // '='
     LParen,       // '('
     RParen,       // ')'
@@ -26,25 +27,27 @@ pub enum Token {
     Eol,          // end of line
 }
 
-/// Convert source text into a sequence of lexical tokens for the language.
+/// Converts source text into a sequence of lexical tokens for the language.
 ///
-/// Processes the input line-by-line, stripping `#` comments and emitting tokens for
-/// identifiers, reserved keywords, integer and floating numeric literals, string literals
-/// (with escape sequences: \n, \t, \r, \", \\), operators (`+`, `-`, `*`, `/`, `//`, `%`,
-/// `=`), parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
+/// Processes input line-by-line, strips `#` comments, and emits tokens for identifiers,
+/// reserved keywords, integer and floating numeric literals, string literals (supports
+/// `\n`, `\t`, `\r`, `\"`, `\\`), operators (`+`, `-`, `*`, `**`, `/`, `//`, `%`, `=`),
+/// parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
 ///
 /// # Returns
 ///
-/// `Ok(Vec<Token>)` with the token stream on success, or `Err(PalladError)` if a lexical
-/// error is encountered (for example `InvalidNumber` for malformed numeric literals or
-/// `UnknownCharacter` for unexpected characters), with the error carrying the line number.
+/// `Ok(Vec<Token>)` containing the token stream on success, or `Err(PalladError)` with the
+/// source line number for the first lexical error encountered (for example `InvalidNumber`,
+/// `InvalidEscape`, `UnterminatedString`, or `UnknownCharacter`).
 ///
 /// # Examples
 ///
 /// ```
-/// let src = "var x = 42\nprint x\n";
+/// let src = r#"
+/// var x = 42
+/// print x
+/// "#;
 /// let tokens = tokenize(src).unwrap();
-/// // starts with: Var, Ident("x"), Eq, Int(42), Eol, Print, Ident("x"), Eol
 /// assert!(matches!(tokens.get(0), Some(Token::Var)));
 /// assert!(matches!(tokens.get(3), Some(Token::Int(42))));
 /// ```
@@ -93,7 +96,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         })?));
                     }
                 }
-                'a'..='z' | 'A'..='Z' => {
+                '_' | 'a'..='z' | 'A'..='Z' => {
                     let mut ident = String::new();
                     while let Some(&c) = chars.peek() {
                         if c.is_alphanumeric() || c == '_' {
@@ -165,9 +168,17 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         tokens.push(Token::Slash);
                     }
                 }
+                '*' => {
+                    chars.next();
+                    if let Some(&'*') = chars.peek() {
+                        chars.next();
+                        tokens.push(Token::Pow);
+                    } else {
+                        tokens.push(Token::Star);
+                    }
+                }
                 '+' => { chars.next(); tokens.push(Token::Plus); }
                 '-' => { chars.next(); tokens.push(Token::Minus); }
-                '*' => { chars.next(); tokens.push(Token::Star); }
                 '%' => { chars.next(); tokens.push(Token::Mod); }
                 '=' => { chars.next(); tokens.push(Token::Eq); }
                 '(' => { chars.next(); tokens.push(Token::LParen); }
