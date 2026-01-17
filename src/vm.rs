@@ -10,6 +10,7 @@ enum Op {
     Div,
     IntDiv,
     Mod,
+    Pow,
     And,
     Or,
     Neg,
@@ -25,6 +26,7 @@ impl Op {
             Op::Div => "divide",
             Op::IntDiv => "integer-divide",
             Op::Mod => "mod",
+            Op::Pow => "power",
             Op::And => "and",
             Op::Or => "or",
             Op::Neg => "negate",
@@ -120,6 +122,9 @@ impl VM {
                 }
                 Instr::Mod => {
                     self.execute_op(Op::Mod)?;
+                }
+                Instr::Pow => {
+                    self.execute_op(Op::Pow)?;
                 }
                 Instr::And => {
                     self.execute_op(Op::And)?;
@@ -260,9 +265,25 @@ impl VM {
                 return Err(PalladError::DivisionByZero { operation: op.name() });
             }
         }
+        // Check for 0 ** 0
+        if matches!(op, Op::Pow) {
+            let left_is_zero = match &a {
+                Value::Int(n) => *n == 0,
+                Value::Float(f) => *f == 0.0,
+                _ => false, // Others raise PalladError::TypeMismatch
+            };
+            let right_is_zero = match &b {
+                Value::Int(n) => *n == 0,
+                Value::Float(f) => *f == 0.0,
+                _ => false, // Others raise PalladError::TypeMismatch
+            };
+            if left_is_zero && right_is_zero {
+                return Err(PalladError::ZeroPowerZero);
+            }
+        }
 
         Ok(match (&a, &b, &op) {
-            // 'none' is invalid in '+ - * / // %' operations.
+            // 'none' is invalid in '+ - * / // % **' operations.
             // Other invalid operations:
             // string - any         any - string        int * string        float * string
             // string * float       string / any        any / string        string // any
@@ -358,6 +379,14 @@ impl VM {
             // float
             (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
             (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
+
+            // power (**)
+            // int
+            (Value::Int(a), Value::Int(b), Op::Pow) => Value::Int(a.pow(*b as u32)),
+            (Value::Int(a), Value::Float(b), Op::Pow) => Value::Float((*a as f64).powf(*b)),
+            // float
+            (Value::Float(a), Value::Int(b), Op::Pow) => Value::Float(a.powf(*b as f64)),
+            (Value::Float(a), Value::Float(b), Op::Pow) => Value::Float(a.powf(*b)),
 
             // and (and)
             (a, b, Op::And) => Value::Bool(Self::value_is_true(a) && Self::value_is_true(b)),

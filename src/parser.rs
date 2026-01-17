@@ -315,32 +315,44 @@ impl Parser {
     /// }
     /// ```
     fn parse_mul_div(&mut self) -> Result<Expr, PalladError> {
-        let mut left = self.parse_factor()?;
+        let mut left = self.parse_pow()?;
 
         while let Some(tok) = self.current() {
             left = match tok {
                 Token::Star => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_pow()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Mul, right: Box::new(right) }
                 }
                 Token::Slash => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_pow()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Div, right: Box::new(right) }
                 }
                 Token::IntDiv => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_pow()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::IntDiv, right: Box::new(right) }
                 }
                 Token::Mod => {
                     self.advance();
-                    let right = self.parse_factor()?;
+                    let right = self.parse_pow()?;
                     Expr::Binary { left: Box::new(left), op: BinOp::Mod, right: Box::new(right) }
                 }
                 _ => break,
             }
+        }
+
+        Ok(left)
+    }
+
+    fn parse_pow(&mut self) -> Result<Expr, PalladError> {
+        let mut left = self.parse_factor()?;
+
+        while matches!(self.current(), Some(Token::Pow)) {
+            self.advance();
+            let right = self.parse_factor()?;
+            left = Expr::Binary { left: Box::new(left), op: BinOp::Pow, right: Box::new(right) };
         }
 
         Ok(left)

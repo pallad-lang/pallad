@@ -35,6 +35,7 @@ pub enum BinOp {
     Div,
     IntDiv,
     Mod,
+    Pow,
     And,
     Or,
 }

@@ -78,6 +78,7 @@ fn compile_expr(expr: Expr, program: &mut Vec<Instr>) {
                 BinOp::Div => program.push(Instr::Div),
                 BinOp::IntDiv => program.push(Instr::IntDiv),
                 BinOp::Mod => program.push(Instr::Mod),
+                BinOp::Pow => program.push(Instr::Pow),
                 BinOp::And => program.push(Instr::And),
                 BinOp::Or => program.push(Instr::Or),
             }

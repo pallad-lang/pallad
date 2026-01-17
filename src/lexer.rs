@@ -16,6 +16,7 @@ pub enum Token {
     Slash,        // '/'
     IntDiv,       // '//'
     Mod,          // '%'
+    Pow,          // '**'
     Eq,           // '='
     LParen,       // '('
     RParen,       // ')'
@@ -93,7 +94,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         })?));
                     }
                 }
-                'a'..='z' | 'A'..='Z' => {
+                '_' | 'a'..='z' | 'A'..='Z' => {
                     let mut ident = String::new();
                     while let Some(&c) = chars.peek() {
                         if c.is_alphanumeric() || c == '_' {
@@ -165,9 +166,17 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         tokens.push(Token::Slash);
                     }
                 }
+                '*' => {
+                    chars.next();
+                    if let Some(&'*') = chars.peek() {
+                        chars.next();
+                        tokens.push(Token::Pow);
+                    } else {
+                        tokens.push(Token::Star);
+                    }
+                }
                 '+' => { chars.next(); tokens.push(Token::Plus); }
                 '-' => { chars.next(); tokens.push(Token::Minus); }
-                '*' => { chars.next(); tokens.push(Token::Star); }
                 '%' => { chars.next(); tokens.push(Token::Mod); }
                 '=' => { chars.next(); tokens.push(Token::Eq); }
                 '(' => { chars.next(); tokens.push(Token::LParen); }

@@ -18,6 +18,7 @@ pub enum PalladError {
     InvalidEscape { char: char, line: usize },
     UnterminatedString { line: usize },
     NegationOverflow,
+    ZeroPowerZero,
 }
 
 impl std::fmt::Display for PalladError {
@@ -71,6 +72,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Line {}: Unterminated string", line),
             PalladError::NegationOverflow =>
                 write!(f, "Integer overflow on negation of 'int'"),
+            PalladError::ZeroPowerZero =>
+                write!(f, "0 ** 0 not allowed"),
         }
     }
 }

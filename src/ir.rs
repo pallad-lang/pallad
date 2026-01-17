@@ -13,6 +13,7 @@ pub enum Instr {
     Div,
     IntDiv,
     Mod,
+    Pow,
     And,
     Or,
     Neg,
