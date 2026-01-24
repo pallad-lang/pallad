@@ -67,7 +67,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 - [x] `/`
 - [x] `//`
 - [x] `%`
-- [ ] `**`
+- [x] `**`
 - [x] `and` `or` `not`
 - [ ] `in` `not in`
 - [ ] `==` `!=`
@@ -183,7 +183,8 @@ This document lists **ALL features of Pallad programming language**, currently i
 This is a list of known missing points about implemented features listed above:
 - Parser:
   - Changing value of a variable needs `var` keyword, otherwise raises parse error `Expected 'var', 'print', or end of line, got Ident(...)`
-  - Multi-line expressions raises parse error `Expected integer, float, variable, or '(', got Eol`.
+  - Multi-line expressions raises parse error `Expected value, variable, or '(', got Eol`.
+  - Using `+` before value (e.g. `+5`) raises parse error `Expected value, variable, or '(', got Plus`.
 - VM:
   - Integer operations can overflow, values wrap silently.
 
