@@ -47,11 +47,9 @@ pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
     Ok(program)
 }
 
-/// Emits IR instructions for `expr` into the provided `program` buffer.
+/// Compiles an AST expression into IR by appending the corresponding instructions to the given program buffer.
 ///
-/// Supports literals, variable loads, /// unary operations (operand first,
-/// then operation), binary operations (left then right), and builtin function
-/// calls (arguments compiled in order).
+/// This includes literals (none, bool, int, float, string), variable loads, unary operations (operand then operator), binary operations (left then right then operator), and builtin function calls (arguments compiled in order).
 ///
 /// # Examples
 ///

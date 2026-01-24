@@ -298,15 +298,13 @@ impl Parser {
         Ok(left)
     }
 
-    /// Parses multiplicative operations (`*`, `/`, `//`, `%`) with left-to-right associativity and returns the resulting expression.
+    /// Parses consecutive multiplicative operators (`*`, `/`, `//`, `%`) into a left-associative expression.
     ///
-    /// This consumes a leading factor and then repeatedly consumes any consecutive multiplicative operator and factor,
-    /// building left-associative `Expr::Binary` nodes until a non-multiplicative token is encountered.
+    /// The produced expression represents multiplication, division, integer division, or modulo operations and sits between exponentiation and addition/subtraction in precedence.
     ///
     /// # Examples
     ///
     /// ```
-    /// // Parse `2 * 3`
     /// let mut parser = Parser::new(vec![Token::Int(2), Token::Star, Token::Int(3)]);
     /// let expr = parser.parse_mul_div().unwrap();
     /// match expr {
@@ -346,6 +344,28 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parses exponentiation expressions, consuming one or more `^` (Pow) operations and returning the resulting expression.
+    ///
+    /// This method parses a primary factor and then repeatedly consumes `Pow` tokens, combining the parsed operands into left-associative `Expr::Binary` nodes with `BinOp::Pow`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = vec![Token::Int(2), Token::Pow, Token::Int(3), Token::Pow, Token::Int(2)];
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_pow().unwrap();
+    /// // Expect a left-associative parse: ((2 ^ 3) ^ 2)
+    /// match expr {
+    ///     Expr::Binary { op: BinOp::Pow, left, right } => {
+    ///         // left should itself be a Binary pow node
+    ///         match *left {
+    ///             Expr::Binary { op: BinOp::Pow, .. } => {}
+    ///             _ => panic!("expected left to be a Pow binary expression"),
+    ///         }
+    ///     }
+    ///     _ => panic!("expected a Binary Pow expression"),
+    /// }
+    /// ```
     fn parse_pow(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_factor()?;
 
