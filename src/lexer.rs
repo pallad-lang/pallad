@@ -32,7 +32,8 @@ pub enum Token {
 /// Processes input line-by-line, strips `#` comments, and emits tokens for identifiers,
 /// reserved keywords, integer and floating numeric literals, string literals (supports
 /// `\n`, `\t`, `\r`, `\"`, `\\`), operators (`+`, `-`, `*`, `**`, `/`, `//`, `%`, `=`),
-/// parentheses, commas, and an end-of-line `Eol` token after each non-empty line.
+/// parentheses, commas, and an end-of-line `Eol` token after each non-empty line
+/// that is not inside parentheses.
 ///
 /// # Returns
 ///
@@ -53,6 +54,7 @@ pub enum Token {
 /// ```
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     let mut tokens = Vec::new();
+    let mut paren_depth: usize = 0;
 
     for (line_no, line) in input.lines().enumerate() {
         let line = line.split('#').next().unwrap_or("").trim();
@@ -181,8 +183,16 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 '-' => { chars.next(); tokens.push(Token::Minus); }
                 '%' => { chars.next(); tokens.push(Token::Mod); }
                 '=' => { chars.next(); tokens.push(Token::Eq); }
-                '(' => { chars.next(); tokens.push(Token::LParen); }
-                ')' => { chars.next(); tokens.push(Token::RParen); }
+                '(' => {
+                    chars.next();
+                    paren_depth = paren_depth.saturating_add(1);
+                    tokens.push(Token::LParen);
+                }
+                ')' => {
+                    chars.next();
+                    paren_depth = paren_depth.saturating_sub(1);
+                    tokens.push(Token::RParen);
+                }
                 ',' => { chars.next(); tokens.push(Token::Comma); }
                 _ => {
                     return Err(PalladError::UnknownCharacter {
@@ -192,7 +202,9 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 },
             }
         }
-        tokens.push(Token::Eol);
+        if paren_depth == 0 {
+            tokens.push(Token::Eol);
+        }
     } 
 
     Ok(tokens)
