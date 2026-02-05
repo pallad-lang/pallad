@@ -64,6 +64,7 @@ impl Parser {
     /// 
     /// - `var <ident> = <expr>` produces `Stmt::Let { name, expr }`
     /// - `print(...)` produces `Stmt::Expr(Expr::Call { name: "print", args })`
+    /// - bare string literals are treated as comments and ignored
     /// 
     /// Empty lines (Eol) are skipped. Syntax errors and premature end-of-input produce `PalladError`.
     ///
@@ -186,12 +187,33 @@ impl Parser {
                     stmts.push(Stmt::Expr(Expr::Call { name: "print".to_string(), args }));
                 }
 
+                Token::Str(s) => {
+                    let newline_count = s.chars().filter(|&c| c == '\n').count();
+                    self.advance();
+                    if newline_count > 0 {
+                        self.line += newline_count;
+                    }
+                    match self.current() {
+                        Some(Token::Eol) => {
+                            self.advance();
+                        }
+                        None => {}
+                        Some(other) => {
+                            return Err(PalladError::UnexpectedToken {
+                                got: format!("{:?}", other),
+                                expected: "end of line".to_string(),
+                                line: self.line,
+                            });
+                        }
+                    }
+                }
+
                 Token::Eol => { self.advance(); }
 
                 other => {
                     return Err(PalladError::UnexpectedToken {
                         got: format!("{:?}", other),
-                        expected: "'var', 'print', or end of line".to_string(),
+                        expected: "'var', 'print', string literal comment, or end of line".to_string(),
                         line: self.line,
                     });
                 }
