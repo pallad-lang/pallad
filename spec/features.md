@@ -51,7 +51,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 - [ ] `dict`
 - [ ] `string`
   - [x] Single-line with `"`
-  - [ ] Multi-line `"""`
+  - [x] Multi-line `"""`
 - [ ] `function`
 - [ ] `color`
 - [ ] ! `date`
