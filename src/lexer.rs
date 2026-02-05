@@ -29,11 +29,11 @@ pub enum Token {
 
 /// Converts source text into a sequence of lexical tokens for the language.
 ///
-/// Processes input line-by-line, strips `#` comments, and emits tokens for identifiers,
-/// reserved keywords, integer and floating numeric literals, string literals (supports
-/// `\n`, `\t`, `\r`, `\"`, `\\`), operators (`+`, `-`, `*`, `**`, `/`, `//`, `%`, `=`),
-/// parentheses, commas, and an end-of-line `Eol` token after each non-empty line
-/// that is not inside parentheses.
+/// Processes input, strips `#` comments outside of string literals, and emits tokens for
+/// identifiers, reserved keywords, integer and floating numeric literals, string literals
+/// (supports `\n`, `\t`, `\r`, `\"`, `\\` and multiline strings with `"""`), operators
+/// (`+`, `-`, `*`, `**`, `/`, `//`, `%`, `=`), parentheses, commas, and an end-of-line
+/// `Eol` token after each non-empty line that is not inside parentheses.
 ///
 /// # Returns
 ///
@@ -55,157 +55,234 @@ pub enum Token {
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     let mut tokens = Vec::new();
     let mut paren_depth: usize = 0;
+    let mut line_no: usize = 1;
+    let mut line_has_tokens = false;
 
-    for (line_no, line) in input.lines().enumerate() {
-        let line = line.split('#').next().unwrap_or("").trim();
-        if line.is_empty() { continue; }
+    let mut chars = input.chars().peekable();
+    while let Some(&ch) = chars.peek() {
+        match ch {
+            ' ' | '\t' | '\r' => {
+                chars.next();
+            }
+            '\n' => {
+                chars.next();
+                if paren_depth == 0 && line_has_tokens {
+                    tokens.push(Token::Eol);
+                }
+                line_has_tokens = false;
+                line_no += 1;
+            }
+            '#' => {
+                chars.next();
+                while let Some(c) = chars.next() {
+                    if c == '\n' {
+                        if paren_depth == 0 && line_has_tokens {
+                            tokens.push(Token::Eol);
+                        }
+                        line_has_tokens = false;
+                        line_no += 1;
+                        break;
+                    }
+                }
+            }
+            '0'..='9' => {
+                let mut num = String::new();
+                let mut is_float = false;
+                let mut dot_count = 0;
+                while let Some(&c) = chars.peek() {
+                    if c.is_numeric() {
+                        num.push(c);
+                        chars.next();
+                    } else if c == '.' {
+                        dot_count += 1;
+                        if dot_count > 1 {
+                            return Err(PalladError::InvalidNumber {
+                                value: num + ".",
+                                line: line_no,
+                            });
+                        }
+                        is_float = true;
+                        num.push(c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                if is_float {
+                    tokens.push(Token::Float(num.parse().map_err(|_| {
+                        PalladError::InvalidNumber { value: num.clone(), line: line_no }
+                    })?));
+                } else {
+                    tokens.push(Token::Int(num.parse().map_err(|_| {
+                        PalladError::InvalidNumber { value: num.clone(), line: line_no }
+                    })?));
+                }
+                line_has_tokens = true;
+            }
+            '_' | 'a'..='z' | 'A'..='Z' => {
+                let mut ident = String::new();
+                while let Some(&c) = chars.peek() {
+                    if c.is_alphanumeric() || c == '_' {
+                        ident.push(c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                match ident.as_str() {
+                    "var" => tokens.push(Token::Var),
+                    "none" => tokens.push(Token::None),
+                    "print" => tokens.push(Token::Print),
+                    "true" => tokens.push(Token::Bool(true)),
+                    "false" => tokens.push(Token::Bool(false)),
+                    "and" => tokens.push(Token::And),
+                    "or" => tokens.push(Token::Or),
+                    "not" => tokens.push(Token::Not),
+                    _ => tokens.push(Token::Ident(ident)),
+                }
+                line_has_tokens = true;
+            }
+            '"' => {
+                chars.next(); // consume opening "
+                let mut is_multiline = false;
+                if let Some('"') = chars.peek() {
+                    let mut lookahead = chars.clone();
+                    lookahead.next();
+                    if let Some('"') = lookahead.next() {
+                        is_multiline = true;
+                        chars.next();
+                        chars.next();
+                    }
+                }
 
-        let mut chars = line.chars().peekable();
+                let mut s = String::new();
+                let mut closed = false;
 
-        while let Some(&ch) = chars.peek() {
-            match ch {
-                ' ' | '\t' => { chars.next(); }
-                '0'..='9' => {
-                    let mut num = String::new();
-                    let mut is_float = false;
-                    let mut dot_count = 0;
-                    while let Some(&c) = chars.peek() {
-                        if c.is_numeric() {
-                            num.push(c);
-                            chars.next();
-                        } else if c == '.' {
-                            dot_count += 1;
-                            if dot_count > 1 {
-                                return Err(PalladError::InvalidNumber {
-                                    value: num + ".",
-                                    line: line_no + 1,
-                                });
+                while let Some(c) = chars.next() {
+                    match c {
+                        '\\' => {
+                            let escaped = match chars.next() {
+                                Some('n') => '\n',
+                                Some('t') => '\t',
+                                Some('r') => '\r',
+                                Some('"') => '"',
+                                Some('\\') => '\\',
+                                Some(other) => {
+                                    return Err(PalladError::InvalidEscape {
+                                        char: other,
+                                        line: line_no,
+                                    });
+                                }
+                                None => {
+                                    return Err(PalladError::UnterminatedString { line: line_no });
+                                }
+                            };
+                            s.push(escaped);
+                        }
+                        '\n' if !is_multiline => {
+                            return Err(PalladError::UnterminatedString { line: line_no });
+                        }
+                        '\n' => {
+                            s.push('\n');
+                            line_no += 1;
+                        }
+                        '"' if is_multiline => {
+                            if let Some('"') = chars.peek() {
+                                let mut lookahead = chars.clone();
+                                lookahead.next();
+                                if let Some('"') = lookahead.next() {
+                                    chars.next();
+                                    chars.next();
+                                    closed = true;
+                                    break;
+                                }
                             }
-                            is_float = true;
-                            num.push(c);
-                            chars.next();
-                        } else {
+                            s.push('"');
+                        }
+                        '"' => {
+                            closed = true;
                             break;
                         }
-                    }
-                    if is_float {
-                        tokens.push(Token::Float(num.parse().map_err(|_| {
-                            PalladError::InvalidNumber { value: num.clone(), line: line_no + 1 }
-                        })?));
-                    } else {
-                        tokens.push(Token::Int(num.parse().map_err(|_| {
-                            PalladError::InvalidNumber { value: num.clone(), line: line_no + 1 }
-                        })?));
+                        other => s.push(other),
                     }
                 }
-                '_' | 'a'..='z' | 'A'..='Z' => {
-                    let mut ident = String::new();
-                    while let Some(&c) = chars.peek() {
-                        if c.is_alphanumeric() || c == '_' {
-                            ident.push(c);
-                            chars.next();
-                        } else {
-                            break;
-                        }
-                    }
-                    match ident.as_str() {
-                        "var" => tokens.push(Token::Var),
-                        "none" => tokens.push(Token::None),
-                        "print" => tokens.push(Token::Print),
-                        "true" => tokens.push(Token::Bool(true)),
-                        "false" => tokens.push(Token::Bool(false)),
-                        "and" => tokens.push(Token::And),
-                        "or" => tokens.push(Token::Or),
-                        "not" => tokens.push(Token::Not),
-                        _ => tokens.push(Token::Ident(ident)),
-                    }
-                }
-                '"' => {
-                    chars.next(); // consume opening "
 
-                    let mut s = String::new();
-                    let mut closed = false;
+                if !closed {
+                    return Err(PalladError::UnterminatedString { line: line_no });
+                }
 
-                    while let Some(c) = chars.next() {
-                        match c {
-                            '\\' => {
-                                let escaped = match chars.next() {
-                                    Some('n') => '\n',
-                                    Some('t') => '\t',
-                                    Some('r') => '\r',
-                                    Some('"') => '"',
-                                    Some('\\') => '\\',
-                                    Some(other) => {
-                                        return Err(PalladError::InvalidEscape {
-                                            char: other,
-                                            line: line_no + 1,
-                                        });
-                                    }
-                                    None => {
-                                        return Err(PalladError::UnterminatedString { line: line_no + 1 });
-                                    }
-                                };
-                                s.push(escaped);
-                            }
-                            '"' => {
-                                closed = true;
-                                break;
-                            }
-                            other => s.push(other),
-                        }
-                    }
-
-                    if !closed {
-                        return Err(PalladError::UnterminatedString { line: line_no + 1 });
-                    }
-
-                    tokens.push(Token::Str(s));
-                }
-                '/' => {
+                tokens.push(Token::Str(s));
+                line_has_tokens = true;
+            }
+            '/' => {
+                chars.next();
+                if let Some(&'/') = chars.peek() {
                     chars.next();
-                    if let Some(&'/') = chars.peek() {
-                        chars.next();
-                        tokens.push(Token::IntDiv);
-                    } else {
-                        tokens.push(Token::Slash);
-                    }
+                    tokens.push(Token::IntDiv);
+                } else {
+                    tokens.push(Token::Slash);
                 }
-                '*' => {
+                line_has_tokens = true;
+            }
+            '*' => {
+                chars.next();
+                if let Some(&'*') = chars.peek() {
                     chars.next();
-                    if let Some(&'*') = chars.peek() {
-                        chars.next();
-                        tokens.push(Token::Pow);
-                    } else {
-                        tokens.push(Token::Star);
-                    }
+                    tokens.push(Token::Pow);
+                } else {
+                    tokens.push(Token::Star);
                 }
-                '+' => { chars.next(); tokens.push(Token::Plus); }
-                '-' => { chars.next(); tokens.push(Token::Minus); }
-                '%' => { chars.next(); tokens.push(Token::Mod); }
-                '=' => { chars.next(); tokens.push(Token::Eq); }
-                '(' => {
-                    chars.next();
-                    paren_depth = paren_depth.saturating_add(1);
-                    tokens.push(Token::LParen);
-                }
-                ')' => {
-                    chars.next();
-                    paren_depth = paren_depth.saturating_sub(1);
-                    tokens.push(Token::RParen);
-                }
-                ',' => { chars.next(); tokens.push(Token::Comma); }
-                _ => {
-                    return Err(PalladError::UnknownCharacter {
-                        got: ch.to_string(),
-                        line: line_no + 1,
-                    });
-                },
+                line_has_tokens = true;
+            }
+            '+' => {
+                chars.next();
+                tokens.push(Token::Plus);
+                line_has_tokens = true;
+            }
+            '-' => {
+                chars.next();
+                tokens.push(Token::Minus);
+                line_has_tokens = true;
+            }
+            '%' => {
+                chars.next();
+                tokens.push(Token::Mod);
+                line_has_tokens = true;
+            }
+            '=' => {
+                chars.next();
+                tokens.push(Token::Eq);
+                line_has_tokens = true;
+            }
+            '(' => {
+                chars.next();
+                paren_depth = paren_depth.saturating_add(1);
+                tokens.push(Token::LParen);
+                line_has_tokens = true;
+            }
+            ')' => {
+                chars.next();
+                paren_depth = paren_depth.saturating_sub(1);
+                tokens.push(Token::RParen);
+                line_has_tokens = true;
+            }
+            ',' => {
+                chars.next();
+                tokens.push(Token::Comma);
+                line_has_tokens = true;
+            }
+            _ => {
+                return Err(PalladError::UnknownCharacter {
+                    got: ch.to_string(),
+                    line: line_no,
+                });
             }
         }
-        if paren_depth == 0 {
-            tokens.push(Token::Eol);
-        }
-    } 
+    }
+
+    if paren_depth == 0 && line_has_tokens {
+        tokens.push(Token::Eol);
+    }
 
     Ok(tokens)
 }
