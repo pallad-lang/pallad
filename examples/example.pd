@@ -4,6 +4,9 @@
 var version = "0.1"
 var suffix = "-dev0"
 
-print("Pallad Programming Language v" + version + suffix + " | Copyright 2025 MIT by Manah Khalili\n")
-print("Pallad is installed correctly on your device, please use \"pallad path/to/code.pd\" to run your codes. You see this because you executed \"pallad\" command with empty or invalid path (file path should ends with \".pd\").")
-print("\n\nNote: In next updates, when you run current command (\"pallad\" without path to target file), Pallad will open REPL. Currently no REPL is available, so please consider this breaking change in the future.")
+print("Pallad Programming Language v" + version + suffix + """ | Copyright 2025 MIT by Manah Khalili
+
+Pallad is installed correctly on your device, please use \"pallad path/to/code.pd\" to run your codes. You see this because you executed \"pallad\" command with empty or invalid path (file path should ends with \".pd\").
+
+
+Note: In next updates, when you run current command (\"pallad\" without path to target file), Pallad will open REPL. Currently no REPL is available, so please consider this breaking change in the future.""")
