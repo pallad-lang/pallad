@@ -183,8 +183,6 @@ This document lists **ALL features of Pallad programming language**, currently i
 This is a list of known missing points about implemented features listed above:
 - Parser:
   - Using `+` before value (e.g. `+5`) raises parse error `Expected value, variable, or '(', got Plus`.
-- VM:
-  - Integer operations can overflow, values wrap silently.
 
 > [!Note]
 > The items on this list have been queued for resolution.

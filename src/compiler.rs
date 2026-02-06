@@ -19,7 +19,7 @@ use crate::ir::Instr;
 /// ```
 ///
 /// # Returns
-/// 
+///
 /// `Ok(Vec<Instr>)` containing the compiled IR program on success, or `Err(PalladError)` if compilation fails.
 pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
     let mut program = vec![];
