@@ -19,12 +19,22 @@ pallad first.pd
 
 ## Lexical Structure
 ### Comments
-Comments in Pallad begin with the hash (`#`) character and continue to the end of the line. Multi-line comments are not currently supported; use multiple single-line comments instead.
+Comments in Pallad begin with the hash (`#`) character and continue to the end of the line. Multi-line comments are supported with `"""`:
 
 ```python
 # Hello World!
-# This is a comment in Pallad
+"""
+This is a comment in Pallad
+And can be more than one line
+"""
 ```
+
+> [!Note]
+> Pallad will skip **any** (single-line or multi-line) bare string line as a comment, so you can use single-line strings to add comments too, but it isn’t recommended because using `#` is clearer and more flexible (such as inline comments):
+> ```python
+> "This line is comment!"
+> # But this is better
+> ```
 
 ### Identifiers
 Identifiers are names used for variables, functions, and objects. They may contain letters, digits, or underscores (`_`), but cannot begin with a digit. Identifiers are case-sensitive. Identifiers starting with `_` are considered private; others are public.

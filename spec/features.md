@@ -7,7 +7,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 
 ## Comments
 - [x] Single-line comments with `#`
-- [ ] Multi-line comments with `"""`
+- [x] Multi-line comments with `"""`
 - [ ] BBCode converter module for comments
 - [ ] Highlight rules for single-line comments:
   - Red: `FIXME`, `CAUTION`, `DEBUG`
@@ -49,7 +49,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 - [ ] `pair`
 - [ ] `triplet`
 - [ ] `dict`
-- [ ] `string`
+- [x] `string`
   - [x] Single-line with `"`
   - [x] Multi-line `"""`
 - [ ] `function`
@@ -182,7 +182,7 @@ This document lists **ALL features of Pallad programming language**, currently i
 ## Known Issues
 This is a list of known missing points about implemented features listed above:
 - Parser:
-  - Changing value of a variable needs `var` keyword, otherwise raises parse error `Expected 'var', 'print', or end of line, got Ident(...)`
+  - Changing value of a variable needs `var` keyword, otherwise raises parse error `Expected 'var', 'print', string literal comment, or end of line, got Ident(...)`
   - Multi-line expressions raises parse error `Expected value, variable, or '(', got Eol`.
   - Using `+` before value (e.g. `+5`) raises parse error `Expected value, variable, or '(', got Plus`.
 - VM:
