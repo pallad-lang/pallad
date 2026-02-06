@@ -8,6 +8,7 @@ mod value;
 mod compiler;
 pub mod error;
 
+use std::io::Error;
 use std::fs;
 use crate::lexer::tokenize;
 use crate::parser::Parser;
@@ -15,6 +16,19 @@ use crate::compiler::compile;
 use crate::vm::VM;
 
 const FALLBACK_CODE: &str = include_str!("../examples/example.pd");
+
+fn read_source_file(source_path: &str) -> Result<String, Error> {
+    Ok(
+        match source_path {
+            file if file.ends_with(".pd") => fs::read_to_string(file)?,
+            "" => FALLBACK_CODE.to_string(),
+            other => {
+                eprintln!("Warning: '{}' is not a .pd file, using fallback example", other);
+                FALLBACK_CODE.to_string()
+            },
+        }
+    )
+}
 
 /// Entry point for the Pallad toolchain: reads a source file, tokenizes and parses it, compiles the AST, and executes the resulting program on the VM while printing any errors to standard error.
 ///
@@ -31,17 +45,14 @@ const FALLBACK_CODE: &str = include_str!("../examples/example.pd");
 /// ```
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let filename = args.get(1).map(|s| s.as_str()).unwrap_or("");
+    let input_path = args.get(1).map(|s| s.as_str()).unwrap_or("");
 
-    let code = match filename {
-        file if file.ends_with(".pd") => match fs::read_to_string(file) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("Failed to read the Pallad source file '{}': {}", file, e);
-                return;
-            }
-        },
-        _ => FALLBACK_CODE.to_string(),
+    let code = match read_source_file(input_path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to read the Pallad source file '{}': {}", input_path, e);
+            return
+        }
     };
 
     let tokens = match tokenize(&code) {
@@ -54,15 +65,15 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let stmts = match parser.parse() {
-        Ok(s) => s,
+        Ok(parsed_statements) => parsed_statements,
         Err(err) => {
             eprintln!("Parse error: {}", err);
             return;
         }
     };
 
-    let program = match compile(stmts) {
-        Ok(s) => s,
+    let bytecode = match compile(stmts) {
+        Ok(compiled_program) => compiled_program,
         Err(err) => {
             eprintln!("Compile error: {}", err);
             return;
@@ -70,7 +81,7 @@ fn main() {
     };
 
     let mut vm = VM::new();
-    if let Err(err) = vm.run(program) {
+    if let Err(err) = vm.run(bytecode) {
         eprintln!("Runtime error: {}", err);
     }
 }

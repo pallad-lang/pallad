@@ -81,7 +81,7 @@ impl VM {
     /// - `DivisionByZero` for division/modulo by zero.
     /// - `TypeMismatch` for unsupported operand type combinations (e.g., invalid types for `IntDiv`).
     /// - `UnaryTypeMismatch` for invalid unary operation type combinations (e.g., negating a string).
-    /// - `NegationOverflow` when negating i64::MIN.
+    /// - `IntegerOverflow` when an integer operation overflows (e.g., negating `i64::MIN`).
     ///
     /// # Examples
     ///
@@ -183,7 +183,7 @@ impl VM {
                 }
                 Instr::Pop => {
                     self.stack.pop()
-                        .ok_or(PalladError::StackUnderflow { operation: "Pop" })?;
+                        .ok_or(PalladError::StackUnderflow { operation: "pop" })?;
                 }
             }
         }
@@ -208,12 +208,12 @@ impl VM {
             // Valid operations:
             // Neg: int, float
             // Not: any (uses truthiness)
-            
+
             // negative (-)
             (Value::Int(v), Op::Neg) => {
                 v.checked_neg()
                     .map(Value::Int)
-                    .ok_or(PalladError::NegationOverflow)?
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("- {v}") })?
             }
             (Value::Float(v), Op::Neg) => Value::Float(-v),
 
@@ -288,13 +288,17 @@ impl VM {
         Ok(match (&a, &b, &op) {
             // 'none' is invalid in '+ - * / // % **' operations.
             // Other invalid operations:
-            // string - any         any - string        int * string        float * string
-            // string * float       string / any        any / string        string // any
-            // any // string        string % any        any % string
-            
+            // string - any         any - string        any * string        string * float
+            // string / any         any / string        string // any       any // string
+            // string % any        any % string         string ** any       any ** string
+
             // add (+)
             // int
-            (Value::Int(a), Value::Int(b), Op::Add) => Value::Int(a + b),
+            (Value::Int(a), Value::Int(b), Op::Add) => {
+                a.checked_add(*b)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("{a} + {b}") })?
+            },
             (Value::Int(a), Value::Float(b), Op::Add) => Value::Float(*a as f64 + b),
             (Value::Int(a), Value::Str(b), Op::Add) => Value::Str(a.to_string() + b),
             // float
@@ -308,7 +312,11 @@ impl VM {
 
             // subtract (-)
             // int
-            (Value::Int(a), Value::Int(b), Op::Sub) => Value::Int(a - b),
+            (Value::Int(a), Value::Int(b), Op::Sub) => {
+                a.checked_sub(*b)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("{a} - {b}") })?
+            },
             (Value::Int(a), Value::Float(b), Op::Sub) => Value::Float(*a as f64 - b),
             // float
             (Value::Float(a), Value::Int(b), Op::Sub) => Value::Float(a - *b as f64),
@@ -316,7 +324,11 @@ impl VM {
 
             // multiply (*)
             // int
-            (Value::Int(a), Value::Int(b), Op::Mul) => Value::Int(a * b),
+            (Value::Int(a), Value::Int(b), Op::Mul) => {
+                a.checked_mul(*b)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("{a} * {b}") })?
+            },
             (Value::Int(a), Value::Float(b), Op::Mul) => Value::Float(*a as f64 * b),
             // float
             (Value::Float(a), Value::Int(b), Op::Mul) => Value::Float(a * *b as f64),
@@ -347,14 +359,14 @@ impl VM {
             (Value::Int(a), Value::Int(b), Op::IntDiv) => {
                 a.checked_div(*b)
                     .map(Value::Int)
-                    .ok_or(PalladError::IntDivOverflow)?
-            }
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("{a} // {b}") })?
+            },
             (Value::Int(a), Value::Float(b), Op::IntDiv) => {
                 let result = (*a as f64 / b).floor();
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::IntDivOverflow);
+                    return Err(PalladError::IntegerOverflow { operation: format!("{a} // {b}") });
                 }
             }
             // float
@@ -363,7 +375,7 @@ impl VM {
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::IntDivOverflow);
+                    return Err(PalladError::IntegerOverflow { operation: format!("{a} // {b}") });
                 }
             }
             (Value::Float(a), Value::Float(b), Op::IntDiv) => {
@@ -371,13 +383,17 @@ impl VM {
                 if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
                     Value::Int(result as i64)
                 } else {
-                    return Err(PalladError::IntDivOverflow);
+                    return Err(PalladError::IntegerOverflow { operation: format!("{a} // {b}") });
                 }
             }
 
             // mod (%)
             // int
-            (Value::Int(a), Value::Int(b), Op::Mod) => Value::Int(a % b),
+            (Value::Int(a), Value::Int(b), Op::Mod) => {
+                a.checked_rem(*b)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntegerOverflow { operation: format!("{a} % {b}") })?
+            },
             (Value::Int(a), Value::Float(b), Op::Mod) => Value::Float(*a as f64 % b),
             // float
             (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
@@ -426,5 +442,5 @@ impl VM {
             Value::Float(f) => *f != 0.0,
             Value::Str(s) => !s.is_empty(),
         }
-    } 
+    }
 }

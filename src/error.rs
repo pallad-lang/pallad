@@ -12,12 +12,11 @@ pub enum PalladError {
     UnaryTypeMismatch { value: Value, operation: &'static str},
     InvalidNumber { value: String, line: usize },
     DivisionByZero { operation: &'static str },
-    IntDivOverflow,
+    IntegerOverflow { operation: String },
     RepeatOverflow,
     NegativeRepeat,
     InvalidEscape { char: char, line: usize },
     UnterminatedString { line: usize },
-    NegationOverflow,
     ZeroPowerZero,
     DuplicateVariable { name: String },
 }
@@ -61,8 +60,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Cannot {} '{}'", operation, value),
             PalladError::DivisionByZero { operation } =>
                 write!(f, "Division by zero at {} operation is not valid", operation),
-            PalladError::IntDivOverflow =>
-                write!(f, "Integer division overflow"),
+            PalladError::IntegerOverflow { operation} =>
+                write!(f, "Integer overflow at: {}", operation),
             PalladError::RepeatOverflow =>
                 write!(f, "String repeat overflow"),
             PalladError::NegativeRepeat =>
@@ -71,11 +70,9 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Line {}: Invalid escaped character: {}", line, char),
             PalladError::UnterminatedString { line } =>
                 write!(f, "Line {}: Unterminated string", line),
-            PalladError::NegationOverflow =>
-                write!(f, "Integer overflow on negation of 'int'"),
             PalladError::ZeroPowerZero =>
                 write!(f, "0 ** 0 not allowed"),
-            PalladError::DuplicateVariable { name } => 
+            PalladError::DuplicateVariable { name } =>
                 write!(f, "Variable '{}' already defined", name),
         }
     }

@@ -86,50 +86,50 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 }
             }
             '0'..='9' => {
-                let mut num = String::new();
+                let mut number_string = String::new();
                 let mut is_float = false;
                 let mut dot_count = 0;
                 while let Some(&c) = chars.peek() {
                     if c.is_numeric() {
-                        num.push(c);
+                        number_string.push(c);
                         chars.next();
                     } else if c == '.' {
                         dot_count += 1;
                         if dot_count > 1 {
                             return Err(PalladError::InvalidNumber {
-                                value: num + ".",
+                                value: number_string + ".",
                                 line: line_no,
                             });
                         }
                         is_float = true;
-                        num.push(c);
+                        number_string.push(c);
                         chars.next();
                     } else {
                         break;
                     }
                 }
                 if is_float {
-                    tokens.push(Token::Float(num.parse().map_err(|_| {
-                        PalladError::InvalidNumber { value: num.clone(), line: line_no }
+                    tokens.push(Token::Float(number_string.parse().map_err(|_| {
+                        PalladError::InvalidNumber { value: number_string.clone(), line: line_no }
                     })?));
                 } else {
-                    tokens.push(Token::Int(num.parse().map_err(|_| {
-                        PalladError::InvalidNumber { value: num.clone(), line: line_no }
+                    tokens.push(Token::Int(number_string.parse().map_err(|_| {
+                        PalladError::InvalidNumber { value: number_string.clone(), line: line_no }
                     })?));
                 }
                 line_has_tokens = true;
             }
             '_' | 'a'..='z' | 'A'..='Z' => {
-                let mut ident = String::new();
+                let mut identifier = String::new();
                 while let Some(&c) = chars.peek() {
                     if c.is_alphanumeric() || c == '_' {
-                        ident.push(c);
+                        identifier.push(c);
                         chars.next();
                     } else {
                         break;
                     }
                 }
-                match ident.as_str() {
+                match identifier.as_str() {
                     "var" => tokens.push(Token::Var),
                     "none" => tokens.push(Token::None),
                     "print" => tokens.push(Token::Print),
@@ -138,72 +138,78 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                     "and" => tokens.push(Token::And),
                     "or" => tokens.push(Token::Or),
                     "not" => tokens.push(Token::Not),
-                    _ => tokens.push(Token::Ident(ident)),
+                    _ => tokens.push(Token::Ident(identifier)),
                 }
                 line_has_tokens = true;
             }
             '"' => {
                 chars.next(); // consume opening "
                 let mut is_multiline = false;
+                let mut is_empty_single_line = false;
                 if let Some('"') = chars.peek() {
-                    let mut lookahead = chars.clone();
-                    lookahead.next();
-                    if let Some('"') = lookahead.next() {
+                    chars.next(); // consume second "
+                    if let Some('"') = chars.peek() { // triple quote
+                        chars.next();
                         is_multiline = true;
-                        chars.next();
-                        chars.next();
+                    } else { // just two quote: empty single-line string
+                        is_empty_single_line = true;
                     }
                 }
 
-                let mut s = String::new();
+                let mut string_content = String::new();
                 let mut closed = false;
 
-                while let Some(c) = chars.next() {
-                    match c {
-                        '\\' => {
-                            let escaped = match chars.next() {
-                                Some('n') => '\n',
-                                Some('t') => '\t',
-                                Some('r') => '\r',
-                                Some('"') => '"',
-                                Some('\\') => '\\',
-                                Some(other) => {
-                                    return Err(PalladError::InvalidEscape {
-                                        char: other,
-                                        line: line_no,
-                                    });
-                                }
-                                None => {
-                                    return Err(PalladError::UnterminatedString { line: line_no });
-                                }
-                            };
-                            s.push(escaped);
-                        }
-                        '\n' if !is_multiline => {
-                            return Err(PalladError::UnterminatedString { line: line_no });
-                        }
-                        '\n' => {
-                            s.push('\n');
-                            line_no += 1;
-                        }
-                        '"' if is_multiline => {
-                            if let Some('"') = chars.peek() {
-                                let mut lookahead = chars.clone();
-                                lookahead.next();
-                                if let Some('"') = lookahead.next() {
-                                    chars.next();
-                                    chars.next();
-                                    closed = true;
-                                    break;
-                                }
+                if is_empty_single_line {
+                    closed = true;
+                } else {
+                    while let Some(c) = chars.next() {
+                        match c {
+                            '\\' => {
+                                let escaped_char = match chars.next() {
+                                    Some('n') => '\n',
+                                    Some('t') => '\t',
+                                    Some('r') => '\r',
+                                    Some('"') => '"',
+                                    Some('\\') => '\\',
+                                    Some(other) => {
+                                        return Err(PalladError::InvalidEscape {
+                                            char: other,
+                                            line: line_no,
+                                        });
+                                    }
+                                    None => {
+                                        return Err(PalladError::UnterminatedString { line: line_no });
+                                    }
+                                };
+                                string_content.push(escaped_char);
                             }
-                            s.push('"');
+                            '\n' if !is_multiline => {
+                                return Err(PalladError::UnterminatedString { line: line_no });
+                            }
+                            '\n' => {
+                                string_content.push('\n');
+                                line_no += 1;
+                            }
+                            '"' if is_multiline => {
+                                if let Some('"') = chars.peek() {
+                                    chars.next(); // consume second "
+                                    if let Some('"') = chars.peek() { // triple quote
+                                        chars.next();
+                                        closed = true;
+                                        break;
+                                    }
+                                    // not a triple quote: push second " (as first)
+                                    string_content.push('"');
+                                }
+                                // one or two quotes (not three): push current "
+                                string_content.push('"');
+                            }
+                            '"' => {
+                                closed = true;
+                                break;
+                            }
+                            other => string_content.push(other),
                         }
-                        '"' => {
-                            closed = true;
-                            break;
-                        }
-                        other => s.push(other),
                     }
                 }
 
@@ -211,7 +217,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                     return Err(PalladError::UnterminatedString { line: line_no });
                 }
 
-                tokens.push(Token::Str(s));
+                tokens.push(Token::Str(string_content));
                 line_has_tokens = true;
             }
             '/' => {

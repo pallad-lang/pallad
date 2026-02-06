@@ -4,7 +4,7 @@ use crate::error::PalladError;
 
 pub struct Parser {
     tokens: Vec<Token>,
-    pos: usize,
+    current_pos: usize,
     line: usize,
 }
 
@@ -21,7 +21,7 @@ impl Parser {
     /// assert_eq!(parser.parse().unwrap().len(), 0);
     /// ```
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, pos: 0, line: 1 }
+        Self { tokens, current_pos: 0, line: 1 }
     }
 
     /// Get a reference to the token at the parser's current position, if one exists.
@@ -37,7 +37,7 @@ impl Parser {
     /// assert!(parser.current().is_none());
     /// ```
     fn current(&self) -> Option<&Token> {
-        self.tokens.get(self.pos)
+        self.tokens.get(self.current_pos)
     }
 
     /// Advance the parser to the next token, incrementing `line` when the current token is `Token::Eol`.
@@ -55,17 +55,17 @@ impl Parser {
         if let Some(Token::Eol) = self.current() {
             self.line += 1;
         }
-        self.pos += 1;
+        self.current_pos += 1;
     }
 
     /// Parses the parser's token stream into an abstract syntax tree of statements.
     ///
     /// The parser consumes tokens until the end of input and produces a vector of `Stmt`:
-    /// 
+    ///
     /// - `var <ident> = <expr>` produces `Stmt::Let { name, expr }`
     /// - `print(...)` produces `Stmt::Expr(Expr::Call { name: "print", args })`
     /// - bare string literals are treated as comments and ignored
-    /// 
+    ///
     /// Empty lines (Eol) are skipped. Syntax errors and premature end-of-input produce `PalladError`.
     ///
     /// # Returns
@@ -199,9 +199,7 @@ impl Parser {
                 Token::Str(s) => {
                     let newline_count = s.chars().filter(|&c| c == '\n').count();
                     self.advance();
-                    if newline_count > 0 {
-                        self.line += newline_count;
-                    }
+                    self.line += newline_count;
                     match self.current() {
                         Some(Token::Eol) => {
                             self.advance();
@@ -402,10 +400,10 @@ impl Parser {
     /// // Expect a right-associative parse: (2 ^ (3 ^ 2))
     /// match expr {
     ///     Expr::Binary { op: BinOp::Pow, left, right } => {
-    ///         // left should itself be a Binary pow node
-    ///         match *left {
-    ///             Expr::Binary { op: BinOp::Pow, .. } => {}
-    ///             _ => panic!("expected left to be a Pow binary expression"),
+    ///         // left should be the base (2) and right should be the nested Pow node (3 ^ 2)
+    ///         match (*left, *right) {
+    ///             (Expr::Int(2), Expr::Binary { op: BinOp::Pow, .. }) => {}
+    ///             _ => panic!("expected a base 2 on the left and a nested Pow expression on the right"),
     ///         }
     ///     }
     ///     _ => panic!("expected a Binary Pow expression"),
@@ -416,7 +414,7 @@ impl Parser {
 
         if matches!(self.current(), Some(Token::Pow)) {
             self.advance();
-            let right = self.parse_unary()?;
+            let right = self.parse_pow()?;
             Ok(Expr::Binary { left: Box::new(left), op: BinOp::Pow, right: Box::new(right) })
         } else {
             Ok(left)
