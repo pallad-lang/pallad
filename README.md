@@ -5,7 +5,7 @@
 **Pallad** is a high-level hybrid programming language inspired by scientific clarity and elemental precision. It blends the simplicity of scripting languages with powerful control and advanced features.
 
 > [!Important]
-> Pallad is currently in the design and concept stage with very first implementation. See the License and [Project Status](#project-status) section below for more information.
+> Pallad is currently in the design and concept stage with very first implementation. See [Project Status](#project-status) section below for more information.
 
 ## Introduction
 
@@ -34,7 +34,7 @@ Tokenize -> Parse -> Compile -> Run
 Code is passed to the lexer, which converts the text to a list of tokens (tokenize). Then, tokens are passed to the parser to generate statements and create an AST, which is used by the compiler to transform to a bytecode-like stack (program). The program is passed to the VM for execution in order (in Rust).
 
 ### Syntax
-Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python and GDScript: keywords and declarations define expressions, and indentation separates code blocks.
+Pallad uses English keywords (often abbreviated) and standard symbols from other languages. Its syntax is similar to Python.
 
 ### Special Features
 > [!Note]
@@ -64,8 +64,14 @@ Pallad offers some unique features:
 This project is currently in its first development stage.
 
 - Single-line comments with `#`
-- Variable declaration
-- `none`, `bool`, `int`, `float`, `string` types
+- Multi-line comments with `"""`
+- Variable declaration and change
+- Types:
+    - `none`
+    - `bool`: `true` / `false`
+    - `int`
+    - `float`
+    - `string`: single-line (`"`) and multi-line (`"""`)
 - `+`, `-`, `*`, `**`, `/`, `//`, `%`, `and`, `or`, `not` operators
 - Built-in functions: `print`
 
@@ -140,35 +146,19 @@ Pallad is in early development. Contributions of all kinds—whether refining th
 
 ## License
 ```text
-Pallad Proprietary Draft License
-Copyright © 2025 Mahan Khalili
+Copyright 2026 Mahan Khalili
 
-1. Ownership
-All rights related to the design, innovations, syntax, and features described in this project
-are the intellectual property of the Pallad project. No part of this project or its
-innovations may be used, modified, or redistributed without written permission from the owner.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-2. Usage Restrictions
-- Use of this project and its innovations is permitted exclusively within the Pallad project.
-- Any use in other projects, whether commercial or non-commercial, is strictly prohibited
-  until the official release of Pallad stable version 2.0.
-- Reverse engineering, copying, or reproducing parts of this project outside Pallad
-  constitutes a violation of this license.
+       http://www.apache.org/licenses/LICENSE-2.0
 
-3. Distribution
-- Redistribution of this project or any part of it without written permission from the owner
-  is prohibited.
-- Public release is only permitted in the official Pallad project form.
-
-4. Liability
-This project and its innovations are provided "as is." The owner assumes no responsibility
-for errors, defects, or damages resulting from unauthorized use.
-
-5. Term
-This license remains valid until the official release of Pallad stable version 2.0.
-After the release of version 2.0, new licensing terms may replace this license.
-
-6. Governing Law
-This license is governed by international intellectual property and copyright laws,
-as well as the local laws of the owner’s jurisdiction.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 ```
+
+See [LICENSE](/LICENSE) file for more information.

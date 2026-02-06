@@ -23,7 +23,7 @@ fn read_source_file(source_path: &str) -> Result<String, Error> {
             file if file.ends_with(".pd") => fs::read_to_string(file)?,
             "" => FALLBACK_CODE.to_string(),
             other => {
-                eprintln!("Warning: '{}' is not a .pd file, using fallback example", other);
+                eprintln!("Warning: '{}' is not a .pd file, using fallback example...", other);
                 FALLBACK_CODE.to_string()
             },
         }
