@@ -7,6 +7,7 @@ pub enum Instr {
     LoadStr(String),
     LoadVar(String),
     StoreVar(String),
+    SetVar(String),
     Add,
     Sub,
     Mul,

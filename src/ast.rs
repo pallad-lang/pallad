@@ -24,6 +24,7 @@ pub enum Expr {
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Let { name: String, expr: Expr },
+    Set { name: String, expr: Expr },
     Expr(Expr),
 }
 

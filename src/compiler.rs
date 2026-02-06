@@ -30,6 +30,10 @@ pub fn compile(stmts: Vec<Stmt>) -> Result<Vec<Instr>, PalladError> {
                 compile_expr(expr, &mut program);
                 program.push(Instr::StoreVar(name));
             }
+            Stmt::Set { name, expr } => {
+                compile_expr(expr, &mut program);
+                program.push(Instr::SetVar(name));
+            }
             Stmt::Expr(Expr::Call { name, args }) => {
                 let argc = args.len();
                 for arg in args {

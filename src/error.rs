@@ -19,6 +19,7 @@ pub enum PalladError {
     UnterminatedString { line: usize },
     NegationOverflow,
     ZeroPowerZero,
+    DuplicateVariable { name: String },
 }
 
 impl std::fmt::Display for PalladError {
@@ -74,6 +75,8 @@ impl std::fmt::Display for PalladError {
                 write!(f, "Integer overflow on negation of 'int'"),
             PalladError::ZeroPowerZero =>
                 write!(f, "0 ** 0 not allowed"),
+            PalladError::DuplicateVariable { name } => 
+                write!(f, "Variable '{}' already defined", name),
         }
     }
 }
