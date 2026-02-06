@@ -115,6 +115,17 @@ impl VM {
                 Instr::StoreVar(name) => {
                     let val = self.stack.pop()
                         .ok_or(PalladError::StackUnderflow { operation: "store variable" })?;
+                    if self.globals.contains_key(&name) {
+                        return Err(PalladError::DuplicateVariable { name: name.clone() });
+                    }
+                    self.globals.insert(name, val);
+                }
+                Instr::SetVar(name) => {
+                    let val = self.stack.pop()
+                        .ok_or(PalladError::StackUnderflow { operation: "set variable" })?;
+                    if !self.globals.contains_key(&name) {
+                        return Err(PalladError::UndefinedVariable { name: name.clone() });
+                    }
                     self.globals.insert(name, val);
                 }
                 Instr::Add => {

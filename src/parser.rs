@@ -89,8 +89,9 @@ impl Parser {
 
         while let Some(tok) = self.current() {
             match tok {
-                Token::Var => {
-                    self.advance();
+                Token::Var | Token::Ident(_) => {
+                    let is_let = matches!(&tok, Token::Var);
+                    if is_let { self.advance() }
                     let var_name = match self.current() {
                         Some(Token::Ident(name)) => {
                             let n = name.clone();
@@ -117,22 +118,30 @@ impl Parser {
                             self.advance();
                             self.parse_expr()?
                         }
-                        Some(Token::Eol) => { Expr::None }
+                        Some(Token::Eol) if is_let => { Expr::None }
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other),
-                                expected: "'=' or end of line".to_string(),
+                                expected: if is_let { "'=' or end of line" } else { "'='" }.to_string(),
                                 line: self.line,
                             });
                         }
                         None => {
-                            return Err(PalladError::EndOfInput {
-                                expected: "'=' or end of line".to_string(),
-                                line: self.line,
-                            });
+                            if is_let {
+                                Expr::None
+                            } else {
+                                return Err(PalladError::EndOfInput {
+                                    expected: "'='".to_string(),
+                                    line: self.line,
+                                });
+                            }
                         }
                     };
-                    stmts.push(Stmt::Let { name: var_name, expr });
+                    if is_let {
+                        stmts.push(Stmt::Let { name: var_name, expr });
+                    } else {
+                        stmts.push(Stmt::Set { name: var_name, expr });
+                    }
                 }
 
                 Token::Print => {
@@ -213,7 +222,7 @@ impl Parser {
                 other => {
                     return Err(PalladError::UnexpectedToken {
                         got: format!("{:?}", other),
-                        expected: "'var', 'print', string literal comment, or end of line".to_string(),
+                        expected: "'var', identifier, 'print', string literal comment, or end of line".to_string(),
                         line: self.line,
                     });
                 }
