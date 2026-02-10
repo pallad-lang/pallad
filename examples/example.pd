@@ -1,12 +1,32 @@
 # This is an example code to run with Pallad's interpreter when <path> parameter is empty or given path is not valid.
 
 # Constants are not supported yet, so we use variables instead.
+var hr = "=" * 40 + "\n"
+var name = "Pallad Programming Language"
 var version = "0.1"
 var suffix = "-dev0"
+var license = """
+Copyright 2026 Mahan Khalili
 
-print("Pallad Programming Language v" + version + suffix + """ | Copyright 2025 MIT by Manah Khalili
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-Pallad is installed correctly on your device, please use \"pallad path/to/code.pd\" to run your codes. You see this because you executed \"pallad\" command with empty or invalid path (file path should ends with \".pd\").
+       http://www.apache.org/licenses/LICENSE-2.0
 
-
-Note: In next updates, when you run current command (\"pallad\" without path to target file), Pallad will open REPL. Currently no REPL is available, so please consider this breaking change in the future.""")
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+var information = (
+    "Pallad is installed correctly on your device, please use \"pallad path/to/code.pd\" to run your codes. " +
+    "You see this because you executed \"pallad\" command with empty or invalid path (file path should ends " +
+    "with \".pd\")."
+)
+var note = (
+    "Note: In next updates, when you run current command (\"pallad\" without path to target file), Pallad " +
+    "will open REPL. Currently no REPL is available, so please consider this breaking change in the future."
+)
+print(hr + " " + name + " v" + version + suffix + "\n" + hr + license + "\n\n" + information + "\n\n\n" + note)
