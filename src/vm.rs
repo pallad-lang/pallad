@@ -3,6 +3,8 @@ use crate::error::PalladError;
 use crate::value::Value;
 use crate::ir::Instr;
 
+const MAX_INT_EXPONENT: i64 = u32::MAX as i64;
+
 enum Op {
     Add,
     Sub,
@@ -162,24 +164,7 @@ impl VM {
                     self.execute_op(Op::Not)?;
                 }
                 Instr::CallBuiltin { name, argc } => {
-                    if name == "print" {
-                        let mut args = Vec::with_capacity(argc);
-                        for _ in 0..argc {
-                            args.push(self.stack.pop()
-                                .ok_or(PalladError::StackUnderflow { operation: "print" })?);
-                        }
-                        for arg in args.into_iter().rev() {
-                            match arg {
-                                Value::None => println!("<none>"),
-                                Value::Bool(b) => println!("{}", b),
-                                Value::Int(n) => println!("{}", n),
-                                Value::Float(f) => println!("{}", f),
-                                Value::Str(s) => println!("{}", s),
-                            }
-                        }
-                    } else {
-                        return Err(PalladError::UnknownBuiltin { name });
-                    }
+                    self.call_builtin(&name, argc)?;
                 }
                 Instr::Pop => {
                     self.stack.pop()
@@ -338,7 +323,7 @@ impl VM {
                 if *b < 0 {
                     return Err(PalladError::NegativeRepeat);
                 }
-                let count = *b as usize;
+                let count = usize::try_from(*b).map_err(|_| PalladError::RepeatOverflow)?;
                 // Check for overflow before allocating
                 a.len()
                     .checked_mul(count)
@@ -402,7 +387,7 @@ impl VM {
             // power (**)
             // int
             (Value::Int(a), Value::Int(b), Op::Pow) => {
-                if *b < 0 || *b > u32::MAX as i64 {
+                if *b < 0 || *b > MAX_INT_EXPONENT {
                     // Negative or large exponents: use float arithmetic
                     Value::Float((*a as f64).powf(*b as f64))
                 } else {
@@ -442,5 +427,30 @@ impl VM {
             Value::Float(f) => *f != 0.0,
             Value::Str(s) => !s.is_empty(),
         }
+    }
+
+    fn call_builtin(&mut self, name: &str, argc: usize) -> Result<(), PalladError> {
+        match name {
+            "print" => {
+                if self.stack.len() < argc {
+                    return Err(PalladError::StackUnderflow { operation: "print" });
+                }
+                let start = self.stack.len() - argc;
+                for i in start..self.stack.len() {
+                    match &self.stack[i] {
+                        Value::None => println!("<none>"),
+                        Value::Bool(b) => println!("{}", b),
+                        Value::Int(n) => println!("{}", n),
+                        Value::Float(f) => println!("{}", f),
+                        Value::Str(s) => println!("{}", s),
+                    }
+                }
+                self.stack.truncate(start);
+            }
+            _ => {
+                return Err(PalladError::UnknownBuiltin { name: name.to_string() });
+            }
+        }
+        Ok(())
     }
 }
