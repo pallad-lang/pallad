@@ -1,33 +1,34 @@
 use std::env;
 mod ast;
-mod lexer;
-mod parser;
-mod ir;
-mod vm;
-mod value;
 mod compiler;
 pub mod error;
+mod ir;
+mod lexer;
+mod parser;
+mod value;
+mod vm;
 
-use std::io::Error;
-use std::fs;
+use crate::compiler::compile;
 use crate::lexer::tokenize;
 use crate::parser::Parser;
-use crate::compiler::compile;
 use crate::vm::VM;
+use std::fs;
+use std::io::Error;
 
 const FALLBACK_CODE: &str = include_str!("../examples/example.pd");
 
 fn read_source_file(source_path: &str) -> Result<String, Error> {
-    Ok(
-        match source_path {
-            file if file.ends_with(".pd") => fs::read_to_string(file)?,
-            "" => FALLBACK_CODE.to_string(),
-            other => {
-                eprintln!("Warning: '{}' is not a .pd file, using fallback example...", other);
-                FALLBACK_CODE.to_string()
-            },
+    Ok(match source_path {
+        file if file.ends_with(".pd") => fs::read_to_string(file)?,
+        "" => FALLBACK_CODE.to_string(),
+        other => {
+            eprintln!(
+                "Warning: '{}' is not a .pd file, using fallback example...",
+                other
+            );
+            FALLBACK_CODE.to_string()
         }
-    )
+    })
 }
 
 /// Entry point for the Pallad toolchain: reads a source file, tokenizes and parses it, compiles the AST, and executes the resulting program on the VM while printing any errors to standard error.
@@ -50,8 +51,11 @@ fn main() {
     let code = match read_source_file(source_path_arg) {
         Ok(source_code) => source_code,
         Err(e) => {
-            eprintln!("Failed to read the Pallad source file '{}': {}", source_path_arg, e);
-            return
+            eprintln!(
+                "Failed to read the Pallad source file '{}': {}",
+                source_path_arg, e
+            );
+            return;
         }
     };
 

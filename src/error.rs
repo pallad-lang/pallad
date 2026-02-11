@@ -2,78 +2,141 @@ use crate::value::Value;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PalladError {
-    UnexpectedToken { got: String, expected: String, line: usize },
-    EndOfInput { expected: String, line: usize },
-    UnknownCharacter { got: String, line: usize },
-    UnknownBuiltin { name: String },
-    UndefinedVariable { name: String },
-    StackUnderflow { operation: &'static str },
-    TypeMismatch { left: Value, right: Value, operation: &'static str },
-    UnaryTypeMismatch { value: Value, operation: &'static str},
-    InvalidNumber { value: String, line: usize },
-    DivisionByZero { operation: &'static str },
-    IntegerOverflow { operation: String },
-    RepeatOverflow,
-    NegativeRepeat,
-    InvalidEscape { char: char, line: usize },
-    UnterminatedString { line: usize },
-    ZeroPowerZero,
-    DuplicateVariable { name: String },
+    UnexpectedToken {
+        got: String,
+        expected: String,
+        line: usize,
+    },
+    EndOfInput {
+        expected: String,
+        line: usize,
+    },
+    UnknownCharacter {
+        got: String,
+        line: usize,
+    },
+    UnknownBuiltin {
+        name: String,
+        line: usize,
+    },
+    UndefinedVariable {
+        name: String,
+        line: usize,
+    },
+    StackUnderflow {
+        operation: &'static str,
+        line: usize,
+    },
+    TypeMismatch {
+        left: Value,
+        right: Value,
+        operation: &'static str,
+        line: usize,
+    },
+    UnaryTypeMismatch {
+        value: Value,
+        operation: &'static str,
+        line: usize,
+    },
+    InvalidNumber {
+        value: String,
+        line: usize,
+    },
+    DivisionByZero {
+        operation: &'static str,
+        line: usize,
+    },
+    IntegerOverflow {
+        operation: String,
+        line: usize,
+    },
+    RepeatOverflow {
+        line: usize,
+    },
+    NegativeRepeat {
+        line: usize,
+    },
+    InvalidEscape {
+        char: char,
+        line: usize,
+    },
+    UnterminatedString {
+        line: usize,
+    },
+    ZeroPowerZero {
+        line: usize,
+    },
+    DuplicateVariable {
+        name: String,
+        line: usize,
+    },
 }
 
 impl std::fmt::Display for PalladError {
-    /// Formats `PalladError` values into human-readable error messages.
-    ///
-    /// Each error variant is rendered with a concise description; variants that include a line number
-    /// include it in the message.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use crate::error::PalladError;
-    ///
-    /// let e = PalladError::UnexpectedToken { got: "}".into(), expected: "identifier".into(), line: 3 };
-    /// assert_eq!(format!("{}", e), "Line 3: Expected identifier, got }");
-    ///
-    /// let e2 = PalladError::DivisionByZero { operation: "divide".into() };
-    /// assert_eq!(format!("{}", e2), "Division by zero at divide operation is not valid");
-    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PalladError::UnexpectedToken { got, expected, line } =>
-                write!(f, "Line {}: Expected {}, got {}", line, expected, got),
-            PalladError::EndOfInput { expected, line } =>
-                write!(f, "Line {}: Expected {}, got end of input", line, expected),
-            PalladError::UnknownCharacter { got, line } =>
-                write!(f, "Line {}: Unknown character: {}", line, got),
-            PalladError::InvalidNumber { value, line } =>
-                write!(f, "Line {}: Invalid number: {}", line, value),
-            PalladError::UnknownBuiltin { name } =>
-                write!(f, "Unknown builtin: {}", name),
-            PalladError::UndefinedVariable { name } =>
-                write!(f, "Undefined variable: {}", name),
-            PalladError::StackUnderflow { operation } =>
-                write!(f, "Stack underflow: {}", operation),
-            PalladError::TypeMismatch { left, right, operation } =>
-                write!(f, "Cannot {} '{}' and '{}'", operation, left, right),
-            PalladError::UnaryTypeMismatch { value, operation } =>
-                write!(f, "Cannot {} '{}'", operation, value),
-            PalladError::DivisionByZero { operation } =>
-                write!(f, "Division by zero at {} operation is not valid", operation),
-            PalladError::IntegerOverflow { operation} =>
-                write!(f, "Integer overflow at: {}", operation),
-            PalladError::RepeatOverflow =>
-                write!(f, "String repeat overflow"),
-            PalladError::NegativeRepeat =>
-                write!(f, "String repeat count can't be negative"),
-            PalladError::InvalidEscape { line, char } =>
-                write!(f, "Line {}: Invalid escaped character: {}", line, char),
-            PalladError::UnterminatedString { line } =>
-                write!(f, "Line {}: Unterminated string", line),
-            PalladError::ZeroPowerZero =>
-                write!(f, "0 ** 0 not allowed"),
-            PalladError::DuplicateVariable { name } =>
-                write!(f, "Variable '{}' already defined", name),
+            PalladError::UnexpectedToken {
+                got,
+                expected,
+                line,
+            } => write!(f, "Line {}: Expected {}, got {}", line, expected, got),
+            PalladError::EndOfInput { expected, line } => {
+                write!(f, "Line {}: Expected {}, got end of input", line, expected)
+            }
+            PalladError::UnknownCharacter { got, line } => {
+                write!(f, "Line {}: Unknown character: {}", line, got)
+            }
+            PalladError::InvalidNumber { value, line } => {
+                write!(f, "Line {}: Invalid number: {}", line, value)
+            }
+            PalladError::UnknownBuiltin { name, line } => {
+                write!(f, "Line {}: Unknown builtin: {}", line, name)
+            }
+            PalladError::UndefinedVariable { name, line } => {
+                write!(f, "Line {}: Undefined variable: {}", line, name)
+            }
+            PalladError::StackUnderflow { operation, line } => {
+                write!(f, "Line {}: Stack underflow: {}", line, operation)
+            }
+            PalladError::TypeMismatch {
+                left,
+                right,
+                operation,
+                line,
+            } => write!(
+                f,
+                "Line {}: Cannot {} '{}' and '{}'",
+                line, operation, left, right
+            ),
+            PalladError::UnaryTypeMismatch {
+                value,
+                operation,
+                line,
+            } => write!(f, "Line {}: Cannot {} '{}'", line, operation, value),
+            PalladError::DivisionByZero { operation, line } => write!(
+                f,
+                "Line {}: Division by zero at {} operation is not valid",
+                line, operation
+            ),
+            PalladError::IntegerOverflow { operation, line } => {
+                write!(f, "Line {}: Integer overflow at: {}", line, operation)
+            }
+            PalladError::RepeatOverflow { line } => {
+                write!(f, "Line {}: String repeat overflow", line)
+            }
+            PalladError::NegativeRepeat { line } => {
+                write!(f, "Line {}: String repeat count can't be negative", line)
+            }
+            PalladError::InvalidEscape { line, char } => {
+                write!(f, "Line {}: Invalid escaped character: {}", line, char)
+            }
+            PalladError::UnterminatedString { line } => {
+                write!(f, "Line {}: Unterminated string", line)
+            }
+            PalladError::ZeroPowerZero { line } => write!(f, "Line {}: 0 ** 0 not allowed", line),
+            PalladError::DuplicateVariable { name, line } => {
+                write!(f, "Line {}: Variable '{}' already defined", line, name)
+            }
         }
     }
 }

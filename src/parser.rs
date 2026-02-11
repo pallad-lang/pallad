@@ -1,227 +1,221 @@
-use crate::ast::{Expr, Stmt, BinOp, UnOp};
-use crate::lexer::Token;
+use crate::ast::{BinOp, Expr, Stmt, UnOp};
 use crate::error::PalladError;
+use crate::lexer::{Token, TokenKind};
 
 pub struct Parser {
     tokens: Vec<Token>,
     current_pos: usize,
-    line: usize,
 }
 
 impl Parser {
-    /// Create a new `Parser` for the given token stream.
-    ///
-    /// Initializes the parser with the provided tokens, sets the current position to 0, and starts the line counter at 1 for error reporting.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let mut parser = Parser::new(vec![]);
-    /// // empty input produces no statements
-    /// assert_eq!(parser.parse().unwrap().len(), 0);
-    /// ```
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current_pos: 0, line: 1 }
+        Self {
+            tokens,
+            current_pos: 0,
+        }
     }
 
-    /// Get a reference to the token at the parser's current position, if one exists.
-    ///
-    /// # Returns
-    ///
-    /// `Some(&Token)` with the current token, or `None` if the parser position is past the end of the token stream.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let parser = Parser::new(vec![]);
-    /// assert!(parser.current().is_none());
-    /// ```
     fn current(&self) -> Option<&Token> {
         self.tokens.get(self.current_pos)
     }
 
-    /// Advance the parser to the next token, incrementing `line` when the current token is `Token::Eol`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut p = Parser::new(vec![Token::Eol, Token::Int(1)]);
-    /// assert_eq!(p.line, 1);
-    /// p.advance();
-    /// assert_eq!(p.line, 2);
-    /// assert_eq!(p.current(), Some(&Token::Int(1)));
-    /// ```
+    fn current_line(&self) -> usize {
+        self.current()
+            .map(|t| t.line)
+            .unwrap_or_else(|| self.tokens.last().map(|t| t.line).unwrap_or(1))
+    }
+
     fn advance(&mut self) {
-        if let Some(Token::Eol) = self.current() {
-            self.line += 1;
-        }
         self.current_pos += 1;
     }
 
-    /// Parses the parser's token stream into an abstract syntax tree of statements.
-    ///
-    /// The parser consumes tokens until the end of input and produces a vector of `Stmt`:
-    ///
-    /// - `var <ident> = <expr>` produces `Stmt::Let { name, expr }`
-    /// - `print(...)` produces `Stmt::Expr(Expr::Call { name: "print", args })`
-    /// - bare string literals are treated as comments and ignored
-    ///
-    /// Empty lines (Eol) are skipped. Syntax errors and premature end-of-input produce `PalladError`.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the parsed `Vec<Stmt>` on success, or a `PalladError` describing the syntax error and line on failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crate::lexer::Token;
-    /// use crate::parser::Parser;
-    ///
-    /// // tokens for: var x = 42
-    /// let tokens = vec![Token::Var, Token::Ident("x".to_string()), Token::Eq, Token::Int(42), Token::Eol];
-    /// let mut parser = Parser::new(tokens);
-    /// let stmts = parser.parse().unwrap();
-    /// assert_eq!(stmts.len(), 1);
-    /// ```
     pub fn parse(&mut self) -> Result<Vec<Stmt>, PalladError> {
         let mut stmts = vec![];
 
         while let Some(tok) = self.current() {
-            match tok {
-                Token::Var | Token::Ident(_) => {
-                    let is_let = matches!(&tok, Token::Var);
-                    if is_let { self.advance() }
+            match &tok.kind {
+                TokenKind::Var | TokenKind::Ident(_) => {
+                    let stmt_line = tok.line;
+                    let is_let = matches!(&tok.kind, TokenKind::Var);
+                    if is_let {
+                        self.advance();
+                    }
+
                     let var_name = match self.current() {
-                        Some(Token::Ident(name)) => {
+                        Some(Token {
+                            kind: TokenKind::Ident(name),
+                            ..
+                        }) => {
                             let n = name.clone();
                             self.advance();
                             n
                         }
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
-                                got: format!("{:?}", other),
+                                got: format!("{:?}", other.kind),
                                 expected: "identifier".to_string(),
-                                line: self.line,
+                                line: other.line,
                             });
                         }
                         None => {
                             return Err(PalladError::EndOfInput {
                                 expected: "identifier".to_string(),
-                                line: self.line,
+                                line: stmt_line,
                             });
                         }
                     };
 
                     let expr = match self.current() {
-                        Some(Token::Eq) => {
+                        Some(Token {
+                            kind: TokenKind::Eq,
+                            ..
+                        }) => {
                             self.advance();
                             self.parse_expr()?
                         }
-                        Some(Token::Eol) if is_let => { Expr::None }
+                        Some(Token {
+                            kind: TokenKind::Eol,
+                            ..
+                        }) if is_let => Expr::None { line: stmt_line },
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
-                                got: format!("{:?}", other),
-                                expected: if is_let { "'=' or end of line" } else { "'='" }.to_string(),
-                                line: self.line,
+                                got: format!("{:?}", other.kind),
+                                expected: if is_let { "'=' or end of line" } else { "'='" }
+                                    .to_string(),
+                                line: other.line,
                             });
                         }
                         None => {
                             if is_let {
-                                Expr::None
+                                Expr::None { line: stmt_line }
                             } else {
                                 return Err(PalladError::EndOfInput {
                                     expected: "'='".to_string(),
-                                    line: self.line,
+                                    line: stmt_line,
                                 });
                             }
                         }
                     };
+
                     if is_let {
-                        stmts.push(Stmt::Let { name: var_name, expr });
+                        stmts.push(Stmt::Let {
+                            name: var_name,
+                            expr,
+                            line: stmt_line,
+                        });
                     } else {
-                        stmts.push(Stmt::Set { name: var_name, expr });
+                        stmts.push(Stmt::Set {
+                            name: var_name,
+                            expr,
+                            line: stmt_line,
+                        });
                     }
                 }
-
-                Token::Print => {
+                TokenKind::Print => {
+                    let stmt_line = tok.line;
                     self.advance();
                     match self.current() {
-                        Some(Token::LParen) => self.advance(),
+                        Some(Token {
+                            kind: TokenKind::LParen,
+                            ..
+                        }) => self.advance(),
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
-                                got: format!("{:?}", other),
+                                got: format!("{:?}", other.kind),
                                 expected: "'('".to_string(),
-                                line: self.line,
+                                line: other.line,
                             });
                         }
                         None => {
                             return Err(PalladError::EndOfInput {
                                 expected: "'('".to_string(),
-                                line: self.line,
+                                line: stmt_line,
                             });
                         }
                     }
 
                     let mut args = vec![];
-                    if let Some(Token::RParen) = self.current() {
+                    if let Some(Token {
+                        kind: TokenKind::RParen,
+                        ..
+                    }) = self.current()
+                    {
                         self.advance();
                     } else {
                         loop {
-                            if let Some(Token::RParen) = self.current() {
+                            if let Some(Token {
+                                kind: TokenKind::RParen,
+                                ..
+                            }) = self.current()
+                            {
                                 self.advance();
                                 break;
                             }
                             args.push(self.parse_expr()?);
                             match self.current() {
-                                Some(Token::Comma) => { self.advance(); }
-                                Some(Token::RParen) => { self.advance(); break; }
+                                Some(Token {
+                                    kind: TokenKind::Comma,
+                                    ..
+                                }) => self.advance(),
+                                Some(Token {
+                                    kind: TokenKind::RParen,
+                                    ..
+                                }) => {
+                                    self.advance();
+                                    break;
+                                }
                                 Some(other) => {
                                     return Err(PalladError::UnexpectedToken {
-                                        got: format!("{:?}", other),
+                                        got: format!("{:?}", other.kind),
                                         expected: "',' or ')'".to_string(),
-                                        line: self.line,
+                                        line: other.line,
                                     });
                                 }
                                 None => {
                                     return Err(PalladError::EndOfInput {
                                         expected: "',' or ')'".to_string(),
-                                        line: self.line,
+                                        line: stmt_line,
                                     });
                                 }
                             }
                         }
                     }
 
-                    stmts.push(Stmt::Expr(Expr::Call { name: "print".to_string(), args }));
+                    let call = Expr::Call {
+                        name: "print".to_string(),
+                        args,
+                        line: stmt_line,
+                    };
+                    stmts.push(Stmt::Expr {
+                        expr: call,
+                        line: stmt_line,
+                    });
                 }
-
-                Token::Str(s) => {
-                    let newline_count = s.chars().filter(|&c| c == '\n').count();
+                TokenKind::Str(_) => {
                     self.advance();
-                    self.line += newline_count;
                     match self.current() {
-                        Some(Token::Eol) => {
-                            self.advance();
-                        }
+                        Some(Token {
+                            kind: TokenKind::Eol,
+                            ..
+                        }) => self.advance(),
                         None => {}
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
-                                got: format!("{:?}", other),
+                                got: format!("{:?}", other.kind),
                                 expected: "end of line".to_string(),
-                                line: self.line,
+                                line: other.line,
                             });
                         }
                     }
                 }
-
-                Token::Eol => { self.advance(); }
-
+                TokenKind::Eol => self.advance(),
                 other => {
                     return Err(PalladError::UnexpectedToken {
                         got: format!("{:?}", other),
-                        expected: "'var', identifier, 'print', string literal comment, or end of line".to_string(),
-                        line: self.line,
+                        expected:
+                            "'var', identifier, 'print', string literal comment, or end of line"
+                                .to_string(),
+                        line: tok.line,
                     });
                 }
             }
@@ -230,248 +224,252 @@ impl Parser {
         Ok(stmts)
     }
 
-    /// Parses an expression starting at the parser's current token and returns its AST node.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(Expr)` containing the parsed expression on success, or `Err(PalladError)` if parsing fails.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut parser = Parser::new(vec![Token::Int(42)]);
-    /// let expr = parser.parse_expr().unwrap();
-    /// assert_eq!(expr, Expr::Int(42));
-    /// ```
     pub fn parse_expr(&mut self) -> Result<Expr, PalladError> {
         self.parse_or()
     }
 
-    /// Parses a left-associative chain of OR expressions.
-    ///
-    /// Continues consuming `or` operators and their right-hand AND operands until a non-OR token is reached.
-    /// OR has the lowest precedence among binary operators.
     fn parse_or(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_and()?;
-
-        while matches!(self.current(), Some(Token::Or)) {
+        while matches!(self.current().map(|t| &t.kind), Some(TokenKind::Or)) {
+            let line = self.current_line();
             self.advance();
             let right = self.parse_and()?;
-            left = Expr::Binary { left: Box::new(left), op: BinOp::Or, right: Box::new(right) };
+            left = Expr::Binary {
+                left: Box::new(left),
+                op: BinOp::Or,
+                right: Box::new(right),
+                line,
+            };
         }
-
         Ok(left)
     }
 
-    /// Parses a left-associative chain of AND expressions.
-    ///
-    /// Continues consuming `and` operators and their right-hand NOT operands until a non-AND token is reached.
-    /// AND has the lowest precedence among binary operators after OR.
     fn parse_and(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_not()?;
-
-        while matches!(self.current(), Some(Token::And)) {
+        while matches!(self.current().map(|t| &t.kind), Some(TokenKind::And)) {
+            let line = self.current_line();
             self.advance();
             let right = self.parse_not()?;
-            left = Expr::Binary { left: Box::new(left), op: BinOp::And, right: Box::new(right) };
+            left = Expr::Binary {
+                left: Box::new(left),
+                op: BinOp::And,
+                right: Box::new(right),
+                line,
+            };
         }
-
         Ok(left)
     }
 
     fn parse_not(&mut self) -> Result<Expr, PalladError> {
-        if let Some(Token::Not) = self.current() {
+        if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Not)) {
+            let line = self.current_line();
             self.advance();
             let expr = self.parse_not()?;
-            Ok(Expr::Unary { op: UnOp::Not, expr: Box::new(expr) })
+            Ok(Expr::Unary {
+                op: UnOp::Not,
+                expr: Box::new(expr),
+                line,
+            })
         } else {
             self.parse_add_sub()
         }
     }
 
-    /// Parses a left-associative chain of addition and subtraction expressions.
-    ///
-    /// Continues consuming `+` and `-` operators and their right-hand multiplicative operands until a non-additive token is reached.
-    /// Returns the parsed `Expr` representing the combined expression (e.g., parsing `1 + 2 - 3` yields an expression equivalent to `((1 + 2) - 3)`).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crate::parser::Parser;
-    /// use crate::lexer::Token;
-    ///
-    /// let tokens = vec![Token::Int(1), Token::Plus, Token::Int(2), Token::Minus, Token::Int(3)];
-    /// let mut parser = Parser::new(tokens);
-    /// let expr = parser.parse_add_sub().unwrap();
-    /// // `expr` now represents ((1 + 2) - 3)
-    /// ```
     fn parse_add_sub(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_mul_div()?;
-
         while let Some(tok) = self.current() {
-            left = match tok {
-                Token::Plus => {
+            left = match tok.kind {
+                TokenKind::Plus => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_mul_div()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::Add, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::Add,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
-                Token::Minus => {
+                TokenKind::Minus => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_mul_div()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::Sub, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::Sub,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
                 _ => break,
             }
         }
-
         Ok(left)
     }
 
-    /// Parses consecutive multiplicative operators (`*`, `/`, `//`, `%`) into a left-associative expression.
-    ///
-    /// The produced expression represents multiplication, division, integer division, or modulo operations and sits between exponentiation and addition/subtraction in precedence.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut parser = Parser::new(vec![Token::Int(2), Token::Star, Token::Int(3)]);
-    /// let expr = parser.parse_mul_div().unwrap();
-    /// match expr {
-    ///     Expr::Binary { op: BinOp::Mul, .. } => (),
-    ///     _ => panic!("expected multiplication binary expression"),
-    /// }
-    /// ```
     fn parse_mul_div(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_unary()?;
-
         while let Some(tok) = self.current() {
-            left = match tok {
-                Token::Star => {
+            left = match tok.kind {
+                TokenKind::Star => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_unary()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::Mul, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::Mul,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
-                Token::Slash => {
+                TokenKind::Slash => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_unary()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::Div, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::Div,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
-                Token::IntDiv => {
+                TokenKind::IntDiv => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_unary()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::IntDiv, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::IntDiv,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
-                Token::Mod => {
+                TokenKind::Mod => {
+                    let line = tok.line;
                     self.advance();
                     let right = self.parse_unary()?;
-                    Expr::Binary { left: Box::new(left), op: BinOp::Mod, right: Box::new(right) }
+                    Expr::Binary {
+                        left: Box::new(left),
+                        op: BinOp::Mod,
+                        right: Box::new(right),
+                        line,
+                    }
                 }
                 _ => break,
             }
         }
-
         Ok(left)
     }
 
-    /// Parses unary expressions (negation).
-    ///
-    /// Handles the unary minus operator, which has lower precedence than exponentiation
-    /// but higher precedence than binary multiplication/division.
     fn parse_unary(&mut self) -> Result<Expr, PalladError> {
-        if let Some(Token::Minus) = self.current() {
+        if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Minus)) {
+            let line = self.current_line();
             self.advance();
-            let expr = self.parse_unary()?;  // Right-recursive for multiple unaries
-            Ok(Expr::Unary { op: UnOp::Neg, expr: Box::new(expr) })
+            let expr = self.parse_unary()?;
+            Ok(Expr::Unary {
+                op: UnOp::Neg,
+                expr: Box::new(expr),
+                line,
+            })
         } else {
             self.parse_pow()
         }
     }
 
-    /// Parses exponentiation expressions, consuming one or more `^` (Pow) operations and returning the resulting expression.
-    ///
-    /// This method parses a primary factor and then repeatedly consumes `Pow` tokens, combining the parsed operands into right-associative `Expr::Binary` nodes with `BinOp::Pow`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let tokens = vec![Token::Int(2), Token::Pow, Token::Int(3), Token::Pow, Token::Int(2)];
-    /// let mut parser = Parser::new(tokens);
-    /// let expr = parser.parse_pow().unwrap();
-    /// // Expect a right-associative parse: (2 ^ (3 ^ 2))
-    /// match expr {
-    ///     Expr::Binary { op: BinOp::Pow, left, right } => {
-    ///         // left should be the base (2) and right should be the nested Pow node (3 ^ 2)
-    ///         match (*left, *right) {
-    ///             (Expr::Int(2), Expr::Binary { op: BinOp::Pow, .. }) => {}
-    ///             _ => panic!("expected a base 2 on the left and a nested Pow expression on the right"),
-    ///         }
-    ///     }
-    ///     _ => panic!("expected a Binary Pow expression"),
-    /// }
-    /// ```
     fn parse_pow(&mut self) -> Result<Expr, PalladError> {
         let left = self.parse_factor()?;
-
-        if matches!(self.current(), Some(Token::Pow)) {
+        if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Pow)) {
+            let line = self.current_line();
             self.advance();
             let right = self.parse_pow()?;
-            Ok(Expr::Binary { left: Box::new(left), op: BinOp::Pow, right: Box::new(right) })
+            Ok(Expr::Binary {
+                left: Box::new(left),
+                op: BinOp::Pow,
+                right: Box::new(right),
+                line,
+            })
         } else {
             Ok(left)
         }
     }
 
-    /// Parses and returns a single factor: an integer, float, identifier, or a parenthesized expression.
-    ///
-    /// This handles one atomic expression unit used by higher-precedence parsing (numbers, variables, or `(expr)`).
-    ///
-    /// # Returns
-    ///
-    /// `Ok(Expr)` containing the parsed factor, or `Err(PalladError)` if the current token is unexpected or the input ends prematurely.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crate::parser::Parser;
-    /// use crate::lexer::Token;
-    /// use crate::ast::Expr;
-    ///
-    /// let mut p = Parser::new(vec![Token::Int(42)]);
-    /// let expr = p.parse_expr().unwrap();
-    /// assert!(matches!(expr, Expr::Int(42)));
-    /// ```
     fn parse_factor(&mut self) -> Result<Expr, PalladError> {
         match self.current().cloned() {
-            Some(Token::None) => { self.advance(); Ok(Expr::None) }
-            Some(Token::Bool(b)) => { self.advance(); Ok(Expr::Bool(b)) }
-            Some(Token::Int(n)) => { self.advance(); Ok(Expr::Int(n)) }
-            Some(Token::Float(f)) => { self.advance(); Ok(Expr::Float(f)) }
-            Some(Token::Str(s)) => { self.advance(); Ok(Expr::Str(s)) }
-            Some(Token::Ident(name)) => { self.advance(); Ok(Expr::Var(name)) }
-            Some(Token::LParen) => {
+            Some(Token {
+                kind: TokenKind::None,
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::None { line })
+            }
+            Some(Token {
+                kind: TokenKind::Bool(value),
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::Bool { value, line })
+            }
+            Some(Token {
+                kind: TokenKind::Int(value),
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::Int { value, line })
+            }
+            Some(Token {
+                kind: TokenKind::Float(value),
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::Float { value, line })
+            }
+            Some(Token {
+                kind: TokenKind::Str(value),
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::Str { value, line })
+            }
+            Some(Token {
+                kind: TokenKind::Ident(name),
+                line,
+            }) => {
+                self.advance();
+                Ok(Expr::Var { name, line })
+            }
+            Some(Token {
+                kind: TokenKind::LParen,
+                ..
+            }) => {
                 self.advance();
                 let expr = self.parse_expr()?;
                 match self.current() {
-                    Some(Token::RParen) => { self.advance(); Ok(expr) }
+                    Some(Token {
+                        kind: TokenKind::RParen,
+                        ..
+                    }) => {
+                        self.advance();
+                        Ok(expr)
+                    }
                     Some(other) => Err(PalladError::UnexpectedToken {
-                        got: format!("{:?}", other),
+                        got: format!("{:?}", other.kind),
                         expected: "')'".to_string(),
-                        line: self.line,
+                        line: other.line,
                     }),
                     None => Err(PalladError::EndOfInput {
                         expected: "')'".to_string(),
-                        line: self.line,
+                        line: self.current_line(),
                     }),
                 }
             }
             Some(tok) => Err(PalladError::UnexpectedToken {
-                got: format!("{:?}", tok),
+                got: format!("{:?}", tok.kind),
                 expected: "value, variable, or '('".to_string(),
-                line: self.line,
+                line: tok.line,
             }),
             None => Err(PalladError::EndOfInput {
                 expected: "value, variable, or '('".to_string(),
-                line: self.line,
+                line: self.current_line(),
             }),
         }
     }
