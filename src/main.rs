@@ -32,7 +32,7 @@ fn read_source_file(source_path: &str) -> Result<String, Error> {
 
 /// Entry point for the Pallad toolchain: reads a source file, tokenizes and parses it, compiles the AST, and executes the resulting program on the VM while printing any errors to standard error.
 ///
-/// On success this runs the compiled program; on failure it prints a descriptive error message to stderr and exits early for that stage (file read, tokenization, parsing, or compilation). The default input path is "examples/example.pd" when no command-line argument is provided or given file isn't as .pd file.
+/// On success this runs the compiled program; on failure it prints a descriptive error message to stderr and exits early for that stage (file read, tokenization, parsing, or compilation). The default input path is "examples/example.pd" when no command-line argument is provided or the given file isn't a .pd file.
 ///
 /// # Examples
 ///
@@ -45,18 +45,18 @@ fn read_source_file(source_path: &str) -> Result<String, Error> {
 /// ```
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let input_path = args.get(1).map(|s| s.as_str()).unwrap_or("");
+    let source_path_arg = args.get(1).map(|s| s.as_str()).unwrap_or("");
 
-    let code = match read_source_file(input_path) {
-        Ok(c) => c,
+    let code = match read_source_file(source_path_arg) {
+        Ok(source_code) => source_code,
         Err(e) => {
-            eprintln!("Failed to read the Pallad source file '{}': {}", input_path, e);
+            eprintln!("Failed to read the Pallad source file '{}': {}", source_path_arg, e);
             return
         }
     };
 
     let tokens = match tokenize(&code) {
-        Ok(toks) => toks,
+        Ok(tokens) => tokens,
         Err(err) => {
             eprintln!("Tokenizer error: {}", err);
             return;
