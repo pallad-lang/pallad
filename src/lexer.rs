@@ -33,6 +33,27 @@ pub struct Token {
     pub line: usize,
 }
 
+/// Converts source text into a sequence of lexer tokens, each annotated with the line on which it appears.
+///
+/// The tokenizer recognizes integers, floats, identifiers, keywords (e.g., `var`, `print`, `none`, `true`, `false`, `and`, `or`, `not`),
+/// string literals (single-line, empty single-line, and multiline with escapes), comments, punctuation, and operators.
+/// On success returns a vector of `Token` values in lexical order. On failure returns a `PalladError` describing the first
+/// encountered lexical error (invalid number, unknown escape, unterminated string, or unknown character).
+///
+/// # Returns
+///
+/// `Ok(Vec<Token>)` with the lexical tokens in order, or `Err(PalladError)` if a lexical error is encountered.
+///
+/// # Examples
+///
+/// ```
+/// let src = r#"var x = 42
+/// print(x)
+/// "#;
+/// let tokens = tokenize(src).unwrap();
+/// assert!(matches!(tokens.first().unwrap().kind, TokenKind::Var));
+/// assert!(matches!(tokens.last().unwrap().kind, TokenKind::Eol));
+/// ```
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     let mut tokens = Vec::new();
     let mut paren_depth: usize = 0;

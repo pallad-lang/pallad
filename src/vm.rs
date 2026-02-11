@@ -20,6 +20,18 @@ enum Op {
 }
 
 impl Op {
+    /// Get the mnemonic name for this operation.
+    ///
+    /// The returned string is a short identifier for the operation (for example, `"add"` or `"not"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::Op;
+    ///
+    /// assert_eq!(Op::Add.name(), "add");
+    /// assert_eq!(Op::Not.name(), "not");
+    /// ```
     pub fn name(&self) -> &'static str {
         match self {
             Op::Add => "add",
@@ -43,6 +55,16 @@ pub struct VM {
 }
 
 impl VM {
+    /// Creates a new virtual machine instance.
+    ///
+    /// The VM is initialized with an empty operand stack and an empty globals map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut vm = VM::new();
+    /// vm.run(vec![]).unwrap();
+    /// ```
     pub fn new() -> Self {
         Self {
             stack: vec![],
@@ -50,6 +72,34 @@ impl VM {
         }
     }
 
+    /// Execute a sequence of instructions on the virtual machine, mutating its operand stack and global variables.
+    ///
+    /// Runs the provided `program` (a `Vec<Instr>`) instruction by instruction. Each instruction updates the VM's
+    /// internal `stack` and/or `globals` as defined by the instruction semantics. The method terminates early and
+    /// returns an error if any instruction causes a runtime failure.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the program completed without runtime errors. `Err(PalladError)` for runtime failures such as:
+    /// `UndefinedVariable`, `StackUnderflow`, `DuplicateVariable`, `UnaryTypeMismatch`, `DivisionByZero`,
+    /// `ZeroPowerZero`, `IntegerOverflow`, `RepeatOverflow`, `TypeMismatch`, and `UnknownBuiltin`. Errors include
+    /// the originating source `line` when available.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pallad_vm::{VM, Instr, Value};
+    ///
+    /// let mut vm = VM::new();
+    /// let program = vec![
+    ///     Instr::LoadInt { value: 1, line: 1 },
+    ///     Instr::LoadInt { value: 2, line: 1 },
+    ///     Instr::Add { line: 1 },
+    /// ];
+    ///
+    /// vm.run(program).unwrap();
+    /// assert_eq!(vm.stack.pop(), Some(Value::Int(3)));
+    /// ```
     pub fn run(&mut self, program: Vec<Instr>) -> Result<(), PalladError> {
         for instr in program {
             match instr {
@@ -118,6 +168,34 @@ impl VM {
         Ok(())
     }
 
+    /// Execute a unary or binary operation and push its result onto the VM stack.
+    ///
+    /// The operation `op` determines whether one or two operands are popped from the stack;
+    /// the computed result is pushed back onto the stack. The `line` is the source-line
+    /// number attached to any error produced while evaluating the operation.
+    ///
+    /// # Parameters
+    ///
+    /// - `op`: the operation to execute.
+    /// - `line`: source-line number for error reporting.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the operation succeeded and its result was pushed onto the stack, or
+    /// a `PalladError` describing the failure (e.g., stack underflow, type mismatch,
+    /// division-by-zero, overflow) with the given `line` context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::{VM, Op, Value};
+    ///
+    /// let mut vm = VM::new();
+    /// vm.stack.push(Value::Int(2));
+    /// vm.stack.push(Value::Int(3));
+    /// vm.execute_op(Op::Add, 10).unwrap();
+    /// assert_eq!(vm.stack.pop(), Some(Value::Int(5)));
+    /// ```
     fn execute_op(&mut self, op: Op, line: usize) -> Result<(), PalladError> {
         let result = if matches!(op, Op::Neg | Op::Not) {
             self.pop_one_operand(op, line)?
@@ -128,6 +206,32 @@ impl VM {
         Ok(())
     }
 
+    /// Pops a single operand from the VM stack and applies a unary operation.
+    ///
+    /// The `line` parameter is used to annotate any error produced with source-line context.
+    ///
+    /// Returns the resulting `Value` for supported unary operations:
+    /// - `Neg` negates `Int` or `Float` (integer negation reports `IntegerOverflow` on overflow).
+    /// - `Not` returns a `Bool` whose value is the logical negation of the operand's truthiness.
+    ///
+    /// Errors:
+    /// - `PalladError::StackUnderflow` if the stack is empty.
+    /// - `PalladError::UnaryTypeMismatch` if the operand's type is incompatible with `op`.
+    /// - `PalladError::IntegerOverflow` for integer negation overflow.
+    ///
+    —
+    /// # Examples
+    ///
+    /// ```
+    /// let mut vm = VM::new();
+    /// vm.stack.push(Value::Int(42));
+    /// let res = vm.pop_one_operand(Op::Neg, 1).unwrap();
+    /// assert_eq!(res, Value::Int(-42));
+    ///
+    /// vm.stack.push(Value::Bool(true));
+    /// let res = vm.pop_one_operand(Op::Not, 2).unwrap();
+    /// assert_eq!(res, Value::Bool(false));
+    /// ```
     fn pop_one_operand(&mut self, op: Op, line: usize) -> Result<Value, PalladError> {
         let v = self.stack.pop().ok_or(PalladError::StackUnderflow {
             operation: op.name(),
@@ -155,6 +259,37 @@ impl VM {
         })
     }
 
+    /// Pops two operands from the VM stack, applies the binary `op`, and returns the resulting `Value`.
+    ///
+    /// The `line` argument is attached to any error produced to indicate the source location.
+    ///
+    /// # Returns
+    ///
+    /// The `Value` produced by applying `op` to the two top-most stack values (left operand is the value
+    /// that was pushed earlier).
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PalladError` with `line` context for the following conditions:
+    /// - `StackUnderflow` if there are fewer than two values on the stack.
+    /// - `DivisionByZero` for `Div`, `IntDiv`, or `Mod` when the right operand is zero.
+    /// - `ZeroPowerZero` for `Pow` when both operands are zero.
+    /// - `IntegerOverflow` when an integer arithmetic operation overflows or an integer result cannot be represented.
+    /// - `NegativeRepeat` when repeating a string by a negative integer.
+    /// - `RepeatOverflow` when repeating a string would overflow memory or conversion to `usize` fails.
+    /// - `TypeMismatch` when the operand types are not compatible with the requested operation.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// // Push two integers and apply addition; the VM will produce the summed value.
+    /// let mut vm = VM::new();
+    /// // (in actual code, push values into the VM stack and call the binary operation)
+    /// // vm.stack.push(Value::Int(1));
+    /// // vm.stack.push(Value::Int(2));
+    /// // let result = vm.pop_two_operands(Op::Add, 1).unwrap();
+    /// // assert_eq!(result, Value::Int(3));
+    /// ```
     fn pop_two_operands(&mut self, op: Op, line: usize) -> Result<Value, PalladError> {
         let b = self.stack.pop().ok_or(PalladError::StackUnderflow {
             operation: op.name(),
@@ -334,6 +469,26 @@ impl VM {
         })
     }
 
+    /// Determines whether a `Value` is truthy.
+    ///
+    /// A `Value` is considered truthy when:
+    /// - `Bool(true)`,
+    /// - `Int` not equal to zero,
+    /// - `Float` not equal to 0.0,
+    /// - `Str` not empty.
+    /// `None` and the falsy variants above are considered false.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::Value;
+    ///
+    /// assert!(!value_is_true(&Value::None));
+    /// assert!(value_is_true(&Value::Bool(true)));
+    /// assert!(!value_is_true(&Value::Int(0)));
+    /// assert!(value_is_true(&Value::Float(0.1)));
+    /// assert!(value_is_true(&Value::Str(String::from("hi"))));
+    /// ```
     fn value_is_true(value: &Value) -> bool {
         match value {
             Value::None => false,
@@ -344,6 +499,32 @@ impl VM {
         }
     }
 
+    /// Calls a built-in function by name using arguments taken from the VM stack.
+    ///
+    /// Currently supports the `"print"` builtin, which prints the top `argc` values
+    /// (from oldest to newest) to stdout and removes them from the stack.
+    ///
+    /// On success this returns `Ok(())`. Errors:
+    /// - `PalladError::StackUnderflow { operation: "print", line }` if the stack
+    ///   contains fewer than `argc` values.
+    /// - `PalladError::UnknownBuiltin { name, line }` if `name` is not a recognized
+    ///   builtin.
+    ///
+    /// The `line` parameter is used to attach source-line context to returned errors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::collections::HashMap;
+    /// # use crate::{VM, Value};
+    /// let mut vm = VM::new();
+    /// // push values to be printed
+    /// vm.stack.push(Value::Int(42));
+    /// vm.stack.push(Value::Str("hello".into()));
+    /// // print two values (prints "42" then "hello") and removes them from the stack
+    /// vm.call_builtin("print", 2, 1).unwrap();
+    /// assert!(vm.stack.is_empty());
+    /// ```
     fn call_builtin(&mut self, name: &str, argc: usize, line: usize) -> Result<(), PalladError> {
         match name {
             "print" => {

@@ -8,6 +8,16 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Creates a new Parser initialized with the provided token stream.
+    ///
+    /// The parser's position is set to the start of the token vector (index 0).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = Vec::<crate::lexer::Token>::new();
+    /// let _parser = crate::parser::Parser::new(tokens);
+    /// ```
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
             tokens,
@@ -15,20 +25,68 @@ impl Parser {
         }
     }
 
+    /// Get the token at the parser's current position.
+    ///
+    /// # Returns
+    ///
+    /// `Some(&Token)` for the token at the current position, or `None` if the position is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // assuming `tokens` is a Vec<Token> and `parser` is created with Parser::new(tokens)
+    /// if let Some(tok) = parser.current() {
+    ///     // inspect tok
+    /// }
+    /// ```
     fn current(&self) -> Option<&Token> {
         self.tokens.get(self.current_pos)
     }
 
+    /// Get the line number of the current token, falling back to the last token's line or `1` if no tokens exist.
+    ///
+    /// # Returns
+    ///
+    /// `usize` — the line number associated with the current token, or the last token's line, or `1` when there are no tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let p = Parser::new(Vec::new());
+    /// assert_eq!(p.current_line(), 1);
+    /// ```
     fn current_line(&self) -> usize {
         self.current()
             .map(|t| t.line)
             .unwrap_or_else(|| self.tokens.last().map(|t| t.line).unwrap_or(1))
     }
 
+    /// Advances the parser's position to consume the current token.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut p = Parser::new(Vec::new());
+    /// let before = p.current_pos;
+    /// p.advance();
+    /// assert_eq!(p.current_pos, before + 1);
+    /// ```
     fn advance(&mut self) {
         self.current_pos += 1;
     }
 
+    /// Parses the token stream into a sequence of statements (AST).
+    ///
+    /// Returns a vector of parsed `Stmt` values or a `PalladError` if parsing fails,
+    /// with each AST node annotated with its source line for error reporting.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut parser = Parser::new(vec![]);
+    /// let stmts = parser.parse().unwrap();
+    /// assert!(stmts.is_empty());
+    /// ```
     pub fn parse(&mut self) -> Result<Vec<Stmt>, PalladError> {
         let mut stmts = vec![];
 
@@ -224,10 +282,43 @@ impl Parser {
         Ok(stmts)
     }
 
+    /// Parses an expression starting at the parser's current token and returns its AST node.
+    ///
+    /// # Returns
+    ///
+    /// `Expr` representing the parsed expression on success, or a `PalladError` describing the parse failure.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use crate::parser::Parser;
+    /// use crate::lexer::{Token, TokenKind};
+    ///
+    /// // Construct a parser with tokens for a simple expression (example only).
+    /// let tokens = vec![Token { kind: TokenKind::Int(42), line: 1 }];
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_expr().expect("failed to parse expression");
+    /// ```
     pub fn parse_expr(&mut self) -> Result<Expr, PalladError> {
         self.parse_or()
     }
 
+    /// Parses a left-associative chain of logical OR expressions and returns the resulting expression AST.
+    ///
+    /// Continues consuming `Or` tokens and combines parsed subexpressions into nested `Expr::Binary` nodes with `BinOp::Or`.
+    ///
+    /// # Returns
+    ///
+    /// `Expr` representing the parsed OR expression.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // assuming `tokens` is a Vec<Token> representing the expression `a or b or c`
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_or().unwrap();
+    /// assert!(matches!(expr, Expr::Binary { op: BinOp::Or, .. }));
+    /// ```
     fn parse_or(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_and()?;
         while matches!(self.current().map(|t| &t.kind), Some(TokenKind::Or)) {
@@ -244,6 +335,18 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parses a left-associative sequence of logical AND expressions into an `Expr`.
+    ///
+    /// Repeatedly consumes `&&`-style `And` tokens and combines the parsed subexpressions
+    /// into `Expr::Binary` nodes using `BinOp::And`, preserving the line number from the
+    /// operator token for each combined node.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Assuming `parser` is a `Parser` positioned at the start of an AND expression:
+    /// let expr = parser.parse_and().unwrap();
+    /// ```
     fn parse_and(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_not()?;
         while matches!(self.current().map(|t| &t.kind), Some(TokenKind::And)) {
@@ -260,6 +363,25 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parses a logical NOT prefix expression or the next higher-precedence expression.
+    ///
+    /// If the current token is a `not`, returns an `Expr::Unary` with `UnOp::Not`,
+    /// the operand parsed recursively, and the node's `line` set to the `not` token's line.
+    /// Otherwise returns the next parsed expression.
+    ///
+    /// # Returns
+    ///
+    /// `Expr::Unary` with `UnOp::Not` and the parsed operand when a leading `not` is present; otherwise the next parsed `Expr`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Given a tokenizer that produces tokens for the input "not true"
+    /// // let tokens = crate::lexer::tokenize("not true");
+    /// // let mut parser = crate::parser::Parser::new(tokens);
+    /// // let expr = parser.parse_not().unwrap();
+    /// // matches!(expr, crate::ast::Expr::Unary { .. });
+    /// ```
     fn parse_not(&mut self) -> Result<Expr, PalladError> {
         if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Not)) {
             let line = self.current_line();
@@ -275,6 +397,14 @@ impl Parser {
         }
     }
 
+    /// Parses a left-associative sequence of addition and subtraction operations.
+    ///
+    /// Starts by parsing a multiplicative expression and then consumes any following `+` or `-`
+    /// operators, combining them into `Expr::Binary` nodes with `BinOp::Add` or `BinOp::Sub`.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `Expr` representing the combined addition/subtraction expression.
     fn parse_add_sub(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_mul_div()?;
         while let Some(tok) = self.current() {
@@ -307,6 +437,32 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parses left-associative multiplication, division, integer-division, and modulus expressions.
+    ///
+    /// This consumes any sequence of `*`, `/`, `//` (IntDiv), and `%` (Mod) operators and their
+    /// right-hand operands, producing nested `Expr::Binary` nodes with the operator's token line
+    /// recorded on each binary node.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `Expr` representing the (possibly nested) binary expression.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Tokens for the expression `2 * 3` (illustrative; types come from the crate's lexer)
+    /// use crate::{Parser, Token, TokenKind};
+    ///
+    /// let tokens = vec![
+    ///     Token::new_int(2, 1),
+    ///     Token::new_kind(TokenKind::Star, 1),
+    ///     Token::new_int(3, 1),
+    /// ];
+    ///
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_mul_div().unwrap();
+    /// // `expr` is an Expr::Binary representing `2 * 3`
+    /// ```
     fn parse_mul_div(&mut self) -> Result<Expr, PalladError> {
         let mut left = self.parse_unary()?;
         while let Some(tok) = self.current() {
@@ -361,6 +517,27 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parse a unary expression, handling a leading unary minus as numeric negation.
+    ///
+    /// If the current token is a minus, consumes it and returns an `Expr::Unary` with `UnOp::Neg`
+    /// applied to the recursively parsed operand; otherwise delegates to parsing exponentiation.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `Expr` for the unary or power expression.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Example (illustrative): parsing "-42" yields a unary negation node.
+    /// # use crate::parser::Parser;
+    /// # use crate::lexer::{Token, TokenKind};
+    /// # use crate::ast::{Expr, UnOp};
+    /// # let tokens = vec![Token::new(TokenKind::Minus, 1), Token::new(TokenKind::Int(42), 1)];
+    /// # let mut p = Parser::new(tokens);
+    /// let expr = p.parse_unary().unwrap();
+    /// // `expr` will be `Expr::Unary { op: UnOp::Neg, expr: Box::new(Expr::Int { value: 42, line: 1 }), line: 1 }`
+    /// ```
     fn parse_unary(&mut self) -> Result<Expr, PalladError> {
         if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Minus)) {
             let line = self.current_line();
@@ -376,6 +553,29 @@ impl Parser {
         }
     }
 
+    /// Parses an exponentiation expression, treating the `^` operator as right-associative.
+    ///
+    /// Parses a base factor and, if a `Pow` token (`^`) follows, parses the right-hand side
+    /// recursively to produce a right-associative binary `Expr::Binary` with `BinOp::Pow`.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `Expr` with line information, or a `PalladError` if parsing fails.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Right-associative: a ^ b ^ c -> a ^ (b ^ c)
+    /// let tokens = vec![ /* tokens representing "a ^ b ^ c" */ ];
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_pow().unwrap();
+    /// match expr {
+    ///     Expr::Binary { op: BinOp::Pow, right, .. } => {
+    ///         // `right` should be another `Expr::Binary` for the nested exponentiation
+    ///     }
+    ///     _ => panic!("expected exponentiation"),
+    /// }
+    /// ```
     fn parse_pow(&mut self) -> Result<Expr, PalladError> {
         let left = self.parse_factor()?;
         if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Pow)) {
@@ -393,6 +593,33 @@ impl Parser {
         }
     }
 
+    /// Parses a primary factor: literals, identifiers, or a parenthesized expression.
+    ///
+    /// Recognizes `None`, boolean, integer, float, and string literals, identifier references,
+    /// and grouped expressions `( ... )`. Advances the parser past the consumed tokens and
+    /// attaches the source line to the produced `Expr`.
+    ///
+    /// # Returns
+    ///
+    /// An `Expr` representing the parsed literal, variable, or grouped expression on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PalladError::UnexpectedToken` if the current token is not a valid factor,
+    /// or `PalladError::EndOfInput` if the input ends where a value or closing parenthesis is expected.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::lexer::{Token, TokenKind};
+    /// use crate::parser::Parser;
+    /// use crate::ast::Expr;
+    ///
+    /// let tokens = vec![Token { kind: TokenKind::Int(42), line: 1 }];
+    /// let mut parser = Parser::new(tokens);
+    /// let expr = parser.parse_factor().unwrap();
+    /// assert!(matches!(expr, Expr::Int { value: 42, line: 1 }));
+    /// ```
     fn parse_factor(&mut self) -> Result<Expr, PalladError> {
         match self.current().cloned() {
             Some(Token {

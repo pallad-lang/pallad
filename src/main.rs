@@ -17,6 +17,26 @@ use std::io::Error;
 
 const FALLBACK_CODE: &str = include_str!("../examples/example.pd");
 
+/// Reads Pallad source from `source_path`, with fallback behavior for empty or non-`.pd` paths.
+///
+/// If `source_path` ends with `.pd`, the file is read and its contents are returned.
+/// If `source_path` is an empty string, the built-in `FALLBACK_CODE` is returned.
+/// If `source_path` is any other non-empty value, a warning is printed to stderr and `FALLBACK_CODE` is returned.
+///
+/// # Errors
+///
+/// Propagates I/O errors that occur when reading a `.pd` file.
+///
+/// # Examples
+///
+/// ```
+/// use std::fs;
+/// let path = "tmp_example.pd";
+/// fs::write(path, "print 1;").unwrap();
+/// let src = read_source_file(path).unwrap();
+/// assert_eq!(src, "print 1;");
+/// fs::remove_file(path).unwrap();
+/// ```
 fn read_source_file(source_path: &str) -> Result<String, Error> {
     Ok(match source_path {
         file if file.ends_with(".pd") => fs::read_to_string(file)?,

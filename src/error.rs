@@ -73,6 +73,18 @@ pub enum PalladError {
 }
 
 impl std::fmt::Display for PalladError {
+    /// Formats a `PalladError` into a concise, human-readable message that includes the source line number.
+    ///
+    /// The message produced varies by error variant and always prefixes the description with `Line {line}:`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::PalladError;
+    ///
+    /// let err = PalladError::UndefinedVariable { name: "x".into(), line: 3 };
+    /// assert_eq!(format!("{}", err), "Line 3: Undefined variable: x");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PalladError::UnexpectedToken {
