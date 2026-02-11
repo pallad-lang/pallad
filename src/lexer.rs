@@ -1,56 +1,58 @@
 use crate::error::PalladError;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Var,          // 'var'
-    None,         // 'none'
-    Print,        // 'print'
-    Ident(String),// variable names
-    Bool(bool),   // 'true' or 'false'
-    Int(i64),     // int numbers
-    Float(f64),   // float numbers
-    Str(String),  // strings
-    Plus,         // '+'
-    Minus,        // '-'
-    Star,         // '*'
-    Slash,        // '/'
-    IntDiv,       // '//'
-    Mod,          // '%'
-    Pow,          // '**'
-    Eq,           // '='
-    LParen,       // '('
-    RParen,       // ')'
-    Comma,        // ','
-    And,          // 'and'
-    Or,           // 'or'
-    Not,          // 'not'
-    Eol,          // end of line
+pub enum TokenKind {
+    Var,
+    None,
+    Print,
+    Ident(String),
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Str(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    IntDiv,
+    Mod,
+    Pow,
+    Eq,
+    LParen,
+    RParen,
+    Comma,
+    And,
+    Or,
+    Not,
+    Eol,
 }
 
-/// Converts source text into a sequence of lexical tokens for the language.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub line: usize,
+}
+
+/// Converts source text into a sequence of lexer tokens, each annotated with the line on which it appears.
 ///
-/// Processes input, strips `#` comments outside of string literals, and emits tokens for
-/// identifiers, reserved keywords, integer and floating numeric literals, string literals
-/// (supports `\n`, `\t`, `\r`, `\"`, `\\` and multiline strings with `"""`), operators
-/// (`+`, `-`, `*`, `**`, `/`, `//`, `%`, `=`), parentheses, commas, and an end-of-line
-/// `Eol` token after each non-empty line that is not inside parentheses.
+/// The tokenizer recognizes integers, floats, identifiers, keywords (e.g., `var`, `print`, `none`, `true`, `false`, `and`, `or`, `not`),
+/// string literals (single-line, empty single-line, and multiline with escapes), comments, punctuation, and operators.
+/// On success returns a vector of `Token` values in lexical order. On failure returns a `PalladError` describing the first
+/// encountered lexical error (invalid number, unknown escape, unterminated string, or unknown character).
 ///
 /// # Returns
 ///
-/// `Ok(Vec<Token>)` containing the token stream on success, or `Err(PalladError)` with the
-/// source line number for the first lexical error encountered (for example `InvalidNumber`,
-/// `InvalidEscape`, `UnterminatedString`, or `UnknownCharacter`).
+/// `Ok(Vec<Token>)` with the lexical tokens in order, or `Err(PalladError)` if a lexical error is encountered.
 ///
 /// # Examples
 ///
 /// ```
-/// let src = r#"
-/// var x = 42
-/// print x
+/// let src = r#"var x = 42
+/// print(x)
 /// "#;
 /// let tokens = tokenize(src).unwrap();
-/// assert!(matches!(tokens.get(0), Some(Token::Var)));
-/// assert!(matches!(tokens.get(3), Some(Token::Int(42))));
+/// assert!(matches!(tokens.first().unwrap().kind, TokenKind::Var));
+/// assert!(matches!(tokens.last().unwrap().kind, TokenKind::Eol));
 /// ```
 pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     let mut tokens = Vec::new();
@@ -67,7 +69,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
             '\n' => {
                 chars.next();
                 if paren_depth == 0 && line_has_tokens {
-                    tokens.push(Token::Eol);
+                    tokens.push(Token {
+                        kind: TokenKind::Eol,
+                        line: line_no,
+                    });
                 }
                 line_has_tokens = false;
                 line_no += 1;
@@ -77,7 +82,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 for c in &mut chars {
                     if c == '\n' {
                         if paren_depth == 0 && line_has_tokens {
-                            tokens.push(Token::Eol);
+                            tokens.push(Token {
+                                kind: TokenKind::Eol,
+                                line: line_no,
+                            });
                         }
                         line_has_tokens = false;
                         line_no += 1;
@@ -86,6 +94,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 }
             }
             '0'..='9' => {
+                let token_line = line_no;
                 let mut number_string = String::new();
                 let mut is_float = false;
                 let mut dot_count = 0;
@@ -98,7 +107,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         if dot_count > 1 {
                             return Err(PalladError::InvalidNumber {
                                 value: number_string + ".",
-                                line: line_no,
+                                line: token_line,
                             });
                         }
                         is_float = true;
@@ -109,17 +118,30 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                     }
                 }
                 if is_float {
-                    tokens.push(Token::Float(number_string.parse().map_err(|_| {
-                        PalladError::InvalidNumber { value: number_string.clone(), line: line_no }
-                    })?));
+                    tokens.push(Token {
+                        kind: TokenKind::Float(number_string.parse().map_err(|_| {
+                            PalladError::InvalidNumber {
+                                value: number_string.clone(),
+                                line: token_line,
+                            }
+                        })?),
+                        line: token_line,
+                    });
                 } else {
-                    tokens.push(Token::Int(number_string.parse().map_err(|_| {
-                        PalladError::InvalidNumber { value: number_string.clone(), line: line_no }
-                    })?));
+                    tokens.push(Token {
+                        kind: TokenKind::Int(number_string.parse().map_err(|_| {
+                            PalladError::InvalidNumber {
+                                value: number_string.clone(),
+                                line: token_line,
+                            }
+                        })?),
+                        line: token_line,
+                    });
                 }
                 line_has_tokens = true;
             }
             '_' | 'a'..='z' | 'A'..='Z' => {
+                let token_line = line_no;
                 let mut identifier = String::new();
                 while let Some(&c) = chars.peek() {
                     if c.is_alphanumeric() || c == '_' {
@@ -129,29 +151,34 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                         break;
                     }
                 }
-                match identifier.as_str() {
-                    "var" => tokens.push(Token::Var),
-                    "none" => tokens.push(Token::None),
-                    "print" => tokens.push(Token::Print),
-                    "true" => tokens.push(Token::Bool(true)),
-                    "false" => tokens.push(Token::Bool(false)),
-                    "and" => tokens.push(Token::And),
-                    "or" => tokens.push(Token::Or),
-                    "not" => tokens.push(Token::Not),
-                    _ => tokens.push(Token::Ident(identifier)),
-                }
+                let kind = match identifier.as_str() {
+                    "var" => TokenKind::Var,
+                    "none" => TokenKind::None,
+                    "print" => TokenKind::Print,
+                    "true" => TokenKind::Bool(true),
+                    "false" => TokenKind::Bool(false),
+                    "and" => TokenKind::And,
+                    "or" => TokenKind::Or,
+                    "not" => TokenKind::Not,
+                    _ => TokenKind::Ident(identifier),
+                };
+                tokens.push(Token {
+                    kind,
+                    line: token_line,
+                });
                 line_has_tokens = true;
             }
             '"' => {
-                chars.next(); // consume opening "
+                let token_line = line_no;
+                chars.next();
                 let mut is_multiline = false;
                 let mut is_empty_single_line = false;
                 if let Some('"') = chars.peek() {
-                    chars.next(); // consume second "
-                    if let Some('"') = chars.peek() { // triple quote
+                    chars.next();
+                    if let Some('"') = chars.peek() {
                         chars.next();
                         is_multiline = true;
-                    } else { // just two quote: empty single-line string
+                    } else {
                         is_empty_single_line = true;
                     }
                 }
@@ -178,13 +205,15 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                                         });
                                     }
                                     None => {
-                                        return Err(PalladError::UnterminatedString { line: line_no });
+                                        return Err(PalladError::UnterminatedString {
+                                            line: token_line,
+                                        });
                                     }
                                 };
                                 string_content.push(escaped_char);
                             }
                             '\n' if !is_multiline => {
-                                return Err(PalladError::UnterminatedString { line: line_no });
+                                return Err(PalladError::UnterminatedString { line: token_line });
                             }
                             '\n' => {
                                 string_content.push('\n');
@@ -192,16 +221,14 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                             }
                             '"' if is_multiline => {
                                 if let Some('"') = chars.peek() {
-                                    chars.next(); // consume second "
-                                    if let Some('"') = chars.peek() { // triple quote
+                                    chars.next();
+                                    if let Some('"') = chars.peek() {
                                         chars.next();
                                         closed = true;
                                         break;
                                     }
-                                    // not a triple quote: push second " (as first)
                                     string_content.push('"');
                                 }
-                                // one or two quotes (not three): push current "
                                 string_content.push('"');
                             }
                             '"' => {
@@ -214,67 +241,105 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
                 }
 
                 if !closed {
-                    return Err(PalladError::UnterminatedString { line: line_no });
+                    return Err(PalladError::UnterminatedString { line: token_line });
                 }
 
-                tokens.push(Token::Str(string_content));
+                tokens.push(Token {
+                    kind: TokenKind::Str(string_content),
+                    line: token_line,
+                });
                 line_has_tokens = true;
             }
             '/' => {
+                let token_line = line_no;
                 chars.next();
                 if let Some(&'/') = chars.peek() {
                     chars.next();
-                    tokens.push(Token::IntDiv);
+                    tokens.push(Token {
+                        kind: TokenKind::IntDiv,
+                        line: token_line,
+                    });
                 } else {
-                    tokens.push(Token::Slash);
+                    tokens.push(Token {
+                        kind: TokenKind::Slash,
+                        line: token_line,
+                    });
                 }
                 line_has_tokens = true;
             }
             '*' => {
+                let token_line = line_no;
                 chars.next();
                 if let Some(&'*') = chars.peek() {
                     chars.next();
-                    tokens.push(Token::Pow);
+                    tokens.push(Token {
+                        kind: TokenKind::Pow,
+                        line: token_line,
+                    });
                 } else {
-                    tokens.push(Token::Star);
+                    tokens.push(Token {
+                        kind: TokenKind::Star,
+                        line: token_line,
+                    });
                 }
                 line_has_tokens = true;
             }
             '+' => {
                 chars.next();
-                tokens.push(Token::Plus);
+                tokens.push(Token {
+                    kind: TokenKind::Plus,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             '-' => {
                 chars.next();
-                tokens.push(Token::Minus);
+                tokens.push(Token {
+                    kind: TokenKind::Minus,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             '%' => {
                 chars.next();
-                tokens.push(Token::Mod);
+                tokens.push(Token {
+                    kind: TokenKind::Mod,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             '=' => {
                 chars.next();
-                tokens.push(Token::Eq);
+                tokens.push(Token {
+                    kind: TokenKind::Eq,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             '(' => {
                 chars.next();
                 paren_depth = paren_depth.saturating_add(1);
-                tokens.push(Token::LParen);
+                tokens.push(Token {
+                    kind: TokenKind::LParen,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             ')' => {
                 chars.next();
                 paren_depth = paren_depth.saturating_sub(1);
-                tokens.push(Token::RParen);
+                tokens.push(Token {
+                    kind: TokenKind::RParen,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             ',' => {
                 chars.next();
-                tokens.push(Token::Comma);
+                tokens.push(Token {
+                    kind: TokenKind::Comma,
+                    line: line_no,
+                });
                 line_has_tokens = true;
             }
             _ => {
@@ -287,7 +352,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, PalladError> {
     }
 
     if paren_depth == 0 && line_has_tokens {
-        tokens.push(Token::Eol);
+        tokens.push(Token {
+            kind: TokenKind::Eol,
+            line: line_no,
+        });
     }
 
     Ok(tokens)
