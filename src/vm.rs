@@ -3,8 +3,6 @@ use crate::ir::Instr;
 use crate::value::Value;
 use std::collections::HashMap;
 
-const MAX_INT_EXPONENT: i64 = u32::MAX as i64;
-
 enum Op {
     Add,
     Sub,
@@ -82,8 +80,8 @@ impl VM {
     ///
     /// `Ok(())` if the program completed without runtime errors. `Err(PalladError)` for runtime failures such as:
     /// `UndefinedVariable`, `StackUnderflow`, `DuplicateVariable`, `UnaryTypeMismatch`, `DivisionByZero`,
-    /// `ZeroPowerZero`, `IntegerOverflow`, `RepeatOverflow`, `TypeMismatch`, and `UnknownBuiltin`. Errors include
-    /// the originating source `line` when available.
+    /// `NegativeExponentOnInteger`, `IntegerOverflow`, `RepeatOverflow`, `TypeMismatch`, and `UnknownBuiltin`.
+    /// Errors include the source line number for diagnostic context.
     ///
     /// # Examples
     ///
@@ -272,7 +270,6 @@ impl VM {
     /// Returns a `PalladError` with `line` context for the following conditions:
     /// - `StackUnderflow` if there are fewer than two values on the stack.
     /// - `DivisionByZero` for `Div`, `IntDiv`, or `Mod` when the right operand is zero.
-    /// - `ZeroPowerZero` for `Pow` when both operands are zero.
     /// - `IntegerOverflow` when an integer arithmetic operation overflows or an integer result cannot be represented.
     /// - `NegativeRepeat` when repeating a string by a negative integer.
     /// - `RepeatOverflow` when repeating a string would overflow memory or conversion to `usize` fails.
@@ -299,33 +296,36 @@ impl VM {
             line,
         })?;
 
-        if matches!(op, Op::Div | Op::IntDiv | Op::Mod) {
+        let both_numeric = matches!((&a, &b),
+            (Value::Int(_) | Value::Float(_), Value::Int(_) | Value::Float(_))
+        );
+        if both_numeric && matches!(op, Op::Div | Op::IntDiv | Op::Mod) {
             let is_zero = match &b {
                 Value::Int(n) => *n == 0,
                 Value::Float(f) => *f == 0.0,
                 _ => false,
             };
             if is_zero {
+                let left = match a {
+                    Value::Int(i) => i.to_string(),
+                    Value::Float(f) => f.to_string(),
+                    _ => String::new(), // Other types filtered above
+                };
+                let right = match b {
+                    Value::Int(i) => i.to_string(),
+                    Value::Float(f) => f.to_string(),
+                    _ => String::new(), // Other types filtered above
+                };
+                let operand = match op {
+                    Op::Div => "/",
+                    Op::IntDiv => "//",
+                    Op::Mod => "%",
+                    _ => "", // Other operands filtered above
+                };
                 return Err(PalladError::DivisionByZero {
-                    operation: op.name(),
+                    operation: format!("{left} {} {right}", operand),
                     line,
-                });
-            }
-        }
-
-        if matches!(op, Op::Pow) {
-            let left_is_zero = match &a {
-                Value::Int(n) => *n == 0,
-                Value::Float(f) => *f == 0.0,
-                _ => false,
-            };
-            let right_is_zero = match &b {
-                Value::Int(n) => *n == 0,
-                Value::Float(f) => *f == 0.0,
-                _ => false,
-            };
-            if left_is_zero && right_is_zero {
-                return Err(PalladError::ZeroPowerZero { line });
+                })
             }
         }
 
@@ -388,16 +388,25 @@ impl VM {
             (Value::Float(a), Value::Float(b), Op::Div) => Value::Float(a / b),
 
             (Value::Int(a), Value::Int(b), Op::IntDiv) => {
-                a.checked_div(*b)
-                    .map(Value::Int)
+                let q = a.checked_div(*b)
                     .ok_or(PalladError::IntegerOverflow {
                         operation: format!("{a} // {b}"),
                         line,
-                    })?
+                    })?;
+                let r = a.checked_rem(*b)
+                    .ok_or(PalladError::IntegerOverflow {
+                        operation: format!("{a} // {b}"),
+                        line,
+                    })?;
+                if (r != 0) && ((r > 0) != (*b > 0)) {
+                    Value::Int(q - 1)
+                } else {
+                    Value::Int(q)
+                }
             }
             (Value::Int(a), Value::Float(b), Op::IntDiv) => {
                 let result = (*a as f64 / b).floor();
-                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                if result.is_finite() && result >= (i64::MIN as f64) && result < ((i64::MAX as f64) + 1.0) {
                     Value::Int(result as i64)
                 } else {
                     return Err(PalladError::IntegerOverflow {
@@ -408,7 +417,7 @@ impl VM {
             }
             (Value::Float(a), Value::Int(b), Op::IntDiv) => {
                 let result = (a / *b as f64).floor();
-                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                if result.is_finite() && result >= (i64::MIN as f64) && result < ((i64::MAX as f64) + 1.0) {
                     Value::Int(result as i64)
                 } else {
                     return Err(PalladError::IntegerOverflow {
@@ -419,7 +428,7 @@ impl VM {
             }
             (Value::Float(a), Value::Float(b), Op::IntDiv) => {
                 let result = (a / b).floor();
-                if result.is_finite() && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                if result.is_finite() && result >= (i64::MIN as f64) && result < ((i64::MAX as f64) + 1.0) {
                     Value::Int(result as i64)
                 } else {
                     return Err(PalladError::IntegerOverflow {
@@ -430,25 +439,41 @@ impl VM {
             }
 
             (Value::Int(a), Value::Int(b), Op::Mod) => {
-                a.checked_rem(*b)
-                    .map(Value::Int)
+                let r = a.checked_rem(*b)
                     .ok_or(PalladError::IntegerOverflow {
                         operation: format!("{a} % {b}"),
                         line,
-                    })?
+                    })?;
+                let result = if (r != 0) && ((r > 0) != (*b > 0)) {
+                    r + b
+                } else {
+                    r
+                };
+                Value::Int(result)
             }
-            (Value::Int(a), Value::Float(b), Op::Mod) => Value::Float(*a as f64 % b),
-            (Value::Float(a), Value::Int(b), Op::Mod) => Value::Float(a % *b as f64),
-            (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(a % b),
+            (Value::Int(a), Value::Float(b), Op::Mod) => Value::Float(((*a as f64 % b) + b) % b),
+            (Value::Float(a), Value::Int(b), Op::Mod) => {
+                Value::Float(((a % *b as f64) + *b as f64) % *b as f64)
+            }
+            (Value::Float(a), Value::Float(b), Op::Mod) => Value::Float(((a % b) + b) % b),
 
             (Value::Int(a), Value::Int(b), Op::Pow) => {
-                if *b < 0 || *b > MAX_INT_EXPONENT {
-                    Value::Float((*a as f64).powf(*b as f64))
-                } else {
-                    a.checked_pow(*b as u32)
-                        .map(Value::Int)
-                        .unwrap_or_else(|| Value::Float((*a as f64).powf(*b as f64)))
+                if *b < 0 {
+                    return Err(PalladError::NegativeExponentOnInteger {
+                        operation: format!("{a} ** {b}"),
+                        line
+                    })
                 }
+                let exp = u32::try_from(*b).map_err(|_| PalladError::IntegerOverflow {
+                    operation: format!("{a} ** {b}"),
+                    line,
+                })?;
+                a.checked_pow(exp)
+                    .map(Value::Int)
+                    .ok_or(PalladError::IntegerOverflow {
+                        operation: format!("{a} ** {b}"),
+                        line,
+                    })?
             }
             (Value::Int(a), Value::Float(b), Op::Pow) => Value::Float((*a as f64).powf(*b)),
             (Value::Float(a), Value::Int(b), Op::Pow) => Value::Float(a.powf(*b as f64)),
