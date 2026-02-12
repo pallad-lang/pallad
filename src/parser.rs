@@ -111,13 +111,13 @@ impl Parser {
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other.kind),
-                                expected: "identifier".to_string(),
+                                expected: "identifier",
                                 line: other.line,
                             });
                         }
                         None => {
                             return Err(PalladError::EndOfInput {
-                                expected: "identifier".to_string(),
+                                expected: "identifier",
                                 line: stmt_line,
                             });
                         }
@@ -138,8 +138,7 @@ impl Parser {
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other.kind),
-                                expected: if is_let { "'=' or end of line" } else { "'='" }
-                                    .to_string(),
+                                expected: if is_let { "'=' or end of line" } else { "'='" },
                                 line: other.line,
                             });
                         }
@@ -148,7 +147,7 @@ impl Parser {
                                 Expr::None { line: stmt_line }
                             } else {
                                 return Err(PalladError::EndOfInput {
-                                    expected: "'='".to_string(),
+                                    expected: "'='",
                                     line: stmt_line,
                                 });
                             }
@@ -180,13 +179,13 @@ impl Parser {
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other.kind),
-                                expected: "'('".to_string(),
+                                expected: "'('",
                                 line: other.line,
                             });
                         }
                         None => {
                             return Err(PalladError::EndOfInput {
-                                expected: "'('".to_string(),
+                                expected: "'('",
                                 line: stmt_line,
                             });
                         }
@@ -225,13 +224,13 @@ impl Parser {
                                 Some(other) => {
                                     return Err(PalladError::UnexpectedToken {
                                         got: format!("{:?}", other.kind),
-                                        expected: "',' or ')'".to_string(),
+                                        expected: "',' or ')'",
                                         line: other.line,
                                     });
                                 }
                                 None => {
                                     return Err(PalladError::EndOfInput {
-                                        expected: "',' or ')'".to_string(),
+                                        expected: "',' or ')'",
                                         line: stmt_line,
                                     });
                                 }
@@ -260,7 +259,7 @@ impl Parser {
                         Some(other) => {
                             return Err(PalladError::UnexpectedToken {
                                 got: format!("{:?}", other.kind),
-                                expected: "end of line".to_string(),
+                                expected: "end of line",
                                 line: other.line,
                             });
                         }
@@ -270,9 +269,7 @@ impl Parser {
                 other => {
                     return Err(PalladError::UnexpectedToken {
                         got: format!("{:?}", other),
-                        expected:
-                            "'var', identifier, 'print', string literal comment, or end of line"
-                                .to_string(),
+                        expected: "'var', identifier, 'print', string literal comment, or end of line",
                         line: tok.line,
                     });
                 }
@@ -680,22 +677,22 @@ impl Parser {
                     }
                     Some(other) => Err(PalladError::UnexpectedToken {
                         got: format!("{:?}", other.kind),
-                        expected: "')'".to_string(),
+                        expected: "')'",
                         line: other.line,
                     }),
                     None => Err(PalladError::EndOfInput {
-                        expected: "')'".to_string(),
+                        expected: "')'",
                         line: self.current_line(),
                     }),
                 }
             }
             Some(tok) => Err(PalladError::UnexpectedToken {
                 got: format!("{:?}", tok.kind),
-                expected: "value, variable, or '('".to_string(),
+                expected: "value, variable, or '('",
                 line: tok.line,
             }),
             None => Err(PalladError::EndOfInput {
-                expected: "value, variable, or '('".to_string(),
+                expected: "value, variable, or '('",
                 line: self.current_line(),
             }),
         }
